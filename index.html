@@ -1,0 +1,1511 @@
+<!doctype html><html lang="is"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#21665F" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#0F1515" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Dagatal, dagbók og verkefnalisti sem brýtur stór verkefni niður í lítil skref.">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Skref"><meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head><body>
+<title>Skref fyrir skref</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&display=swap">
+<style>
+/* Layout: sticky header with tabs; each view is a two-column grid that stacks on phones; one modal sheet for all editing. */
+:root{
+  --bg:#EDF1F0; --surface:#FFFFFF; --surface-2:#F5F8F7; --ink:#1B2627; --muted:#566463; --line:#D3DCDA;
+  --accent:#21665F; --accent-ink:#FFFFFF; --accent-soft:#DAEAE6;
+  --next:#F0B23C; --next-soft:#FBEFD4; --next-ink:#2B1F03;
+  --c-verkefni:#21665F; --c-admin:#6A55B0; --c-fundur:#2F6AA8; --c-dagskra:#86761A;
+  --ok:#2E7D4F; --warn:#9A5B00;
+  --font-d:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --font-b:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --r:12px; --hour:46px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0F1515; --surface:#172020; --surface-2:#1C2726; --ink:#E3EBE9; --muted:#9AAAA8; --line:#2C3938;
+  --accent:#62B8AE; --accent-ink:#0A1413; --accent-soft:#1D3532;
+  --next:#F0B23C; --next-soft:#352A12; --next-ink:#2B1F03;
+  --c-verkefni:#62B8AE; --c-admin:#A898E6; --c-fundur:#79ABE2; --c-dagskra:#CDBB5C;
+  --ok:#6CC28F; --warn:#E9A94B; color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --bg:#0F1515; --surface:#172020; --surface-2:#1C2726; --ink:#E3EBE9; --muted:#9AAAA8; --line:#2C3938;
+  --accent:#62B8AE; --accent-ink:#0A1413; --accent-soft:#1D3532;
+  --next:#F0B23C; --next-soft:#352A12; --next-ink:#2B1F03;
+  --c-verkefni:#62B8AE; --c-admin:#A898E6; --c-fundur:#79ABE2; --c-dagskra:#CDBB5C;
+  --ok:#6CC28F; --warn:#E9A94B; color-scheme:dark; }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-b);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+h1,h2,h3{font-family:var(--font-d);font-weight:700;text-wrap:balance;margin:0;line-height:1.15}
+p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto}
+
+/* header */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:12px 10px;border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:12px 20px;flex-wrap:wrap}
+.brand{font-family:var(--font-d);font-weight:700;font-size:22px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.brand svg{color:var(--accent)}
+nav.tabs{display:flex;gap:4px;flex-wrap:wrap;order:3;flex-basis:100%}
+@media (min-width:760px){ nav.tabs{order:0;flex-basis:auto} }
+.tab{border:0;background:none;padding:8px 14px;border-radius:999px;color:var(--muted);font-weight:700}
+.tab[aria-current="page"]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+.top .spacer{flex:1}
+
+main{padding-block:24px 64px}
+.eyebrow{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.hello{display:grid;gap:6px;margin-bottom:22px}
+.hello h1{font-size:clamp(26px,4vw,36px);font-weight:500}
+
+.grid2{display:grid;gap:20px;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);align-items:start}
+@media (max-width:860px){ .grid2{grid-template-columns:minmax(0,1fr)} }
+.col{display:grid;gap:20px;min-width:0}
+.calgrid{grid-template-columns:minmax(0,2.4fr) minmax(0,1fr)}
+@media (max-width:860px){ .calgrid{grid-template-columns:minmax(0,1fr)} }
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:grid;gap:12px;min-width:0}
+.panel h2{font-size:19px}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.sub{color:var(--muted);font-size:14px}
+
+/* buttons */
+.btn{border:1px solid var(--line);background:var(--surface);padding:9px 15px;border-radius:999px;font-weight:700;display:inline-flex;align-items:center;gap:8px;line-height:1.2}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.go{background:var(--next);color:var(--next-ink);border-color:var(--next)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--ink);border-color:var(--line)}
+.btn.sm{padding:6px 11px;font-size:14px}
+.btn.danger{color:#B3261E;border-color:color-mix(in srgb,#B3261E 40%,var(--line))}
+.icon-btn{border:1px solid transparent;background:none;width:36px;height:36px;border-radius:999px;display:inline-grid;place-items:center;color:var(--muted);flex:none}
+.icon-btn:hover{border-color:var(--line);color:var(--ink)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-size:14px;font-weight:700;color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.chip:disabled{opacity:.4;cursor:not-allowed}
+
+/* type colors */
+.t-verkefni{--tc:var(--c-verkefni)} .t-admin{--tc:var(--c-admin)} .t-fundur{--tc:var(--c-fundur)} .t-dagskra{--tc:var(--c-dagskra)}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--tc)}
+.badge::before{content:"";flex:none;width:8px;height:8px;border-radius:2px;background:var(--tc)}
+.step .meta .badge{flex-basis:100%}
+
+/* next step */
+.next{background:var(--next-soft);border:1px solid color-mix(in srgb,var(--next) 55%,transparent);border-radius:16px;padding:22px;display:grid;gap:12px}
+.next .label{font-size:13px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--warn)}
+.next h2{font-size:clamp(24px,3.4vw,32px);font-weight:700}
+.next .meta{color:var(--muted);display:flex;gap:6px 12px;flex-wrap:wrap;font-size:15px}
+.next .hint{font-size:14px;color:var(--muted)}
+
+/* step rows */
+.steps{display:grid;gap:2px}
+.step{display:flex;align-items:flex-start;gap:10px;padding:8px 6px;border-radius:8px;min-width:0}
+.step:hover{background:var(--surface-2)}
+.step .body{flex:1;min-width:0;display:grid;gap:2px}
+.step .title{border:0;background:none;padding:0;text-align:left;font-weight:700;overflow-wrap:anywhere}
+.step .meta{font-size:13px;color:var(--muted);display:flex;gap:4px 10px;flex-wrap:wrap}
+.step.done .title{text-decoration:line-through;color:var(--muted);font-weight:400}
+.step.waiting .title{color:var(--muted)}
+.chk{flex:none;width:24px;height:24px;margin-top:1px;border-radius:7px;border:2px solid var(--muted);background:var(--surface);display:grid;place-items:center;padding:0;color:transparent}
+.chk[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:#fff}
+.chk:disabled{opacity:.35;cursor:not-allowed}
+.group-title{font-size:13px;font-weight:700;color:var(--muted);display:flex;gap:8px;align-items:center;margin-top:6px}
+.slotchip{font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700}
+
+/* agenda */
+.agenda{display:grid;gap:6px}
+.ag{display:grid;grid-template-columns:58px minmax(0,1fr);gap:10px;align-items:start;padding:8px 10px;border-radius:8px;background:var(--surface-2);border-left:4px solid var(--tc)}
+.ag time{font-variant-numeric:tabular-nums;font-weight:700;font-size:14px}
+.ag .t{font-weight:700;overflow-wrap:anywhere}
+.ag button.t{border:0;background:none;padding:0;text-align:left}
+.ag .s{font-size:13px;color:var(--muted)}
+.empty-line{color:var(--muted);font-size:15px}
+
+/* cards */
+.cards{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(270px,1fr))}
+.card{text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:16px;display:grid;gap:10px;align-content:start;min-width:0}
+.card:hover{border-color:var(--tc)}
+.card h3{font-size:19px;overflow-wrap:anywhere}
+.bar{height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+.bar span{display:block;height:100%;background:var(--tc)}
+.card .meta{font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.card .nextline{font-size:14px;overflow-wrap:anywhere}
+.waitline{font-size:14px;color:var(--warn);font-weight:700}
+
+/* calendar */
+.cal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.cal-head h1{font-size:28px;font-weight:500}
+.cal-scroll{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.cal{display:grid;grid-template-columns:52px repeat(7,minmax(96px,1fr));min-width:740px}
+.cal .dh{position:sticky;top:0;padding:10px 6px;text-align:center;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted);background:var(--surface)}
+.cal .dh b{display:block;font-family:var(--font-d);font-size:20px;color:var(--ink);font-variant-numeric:tabular-nums}
+.cal .dh.today b{color:var(--accent)}
+.cal .dh.today{box-shadow:inset 0 -3px 0 var(--accent)}
+.hours{display:grid}
+.hours div{height:var(--hour);font-size:12px;color:var(--muted);text-align:right;padding-right:8px;transform:translateY(-8px);font-variant-numeric:tabular-nums}
+.dcol{position:relative;border-left:1px solid var(--line)}
+.dcol.today{background:color-mix(in srgb,var(--accent-soft) 45%,transparent)}
+.cell{display:block;width:100%;height:var(--hour);border:0;border-top:1px solid var(--line);background:none;padding:0}
+.cell:hover{background:var(--surface-2)}
+.blk{position:absolute;border:0;border-radius:7px;padding:3px 6px;text-align:left;font-size:12px;line-height:1.25;overflow:hidden;
+  background:color-mix(in srgb,var(--tc) 18%,var(--surface));color:var(--ink);box-shadow:inset 3px 0 0 var(--tc), 0 0 0 1px color-mix(in srgb,var(--tc) 35%,transparent)}
+.blk{display:flex;flex-direction:column;justify-content:flex-start;gap:1px}
+.blk b,.blk span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.blk.step{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--tc) 12%,var(--surface)) 0 6px,color-mix(in srgb,var(--tc) 18%,var(--surface)) 6px 12px)}
+.blk.done{opacity:.5;text-decoration:line-through}
+.blk span{font-variant-numeric:tabular-nums;color:var(--muted)}
+
+/* journal */
+.paper{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px;display:grid;gap:16px;min-width:0}
+.paper textarea{width:100%;min-height:340px;resize:vertical;border:0;background:
+  repeating-linear-gradient(to bottom,transparent 0 31px,var(--line) 31px 32px);line-height:32px;font-size:17px;padding:0 2px;outline:none}
+.paper textarea:focus-visible{outline:2px dashed var(--line);outline-offset:6px}
+.datenav{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.datenav h1{font-size:26px;font-weight:500;flex:1;min-width:0}
+.field-label{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.save-state{font-size:13px;color:var(--muted)}
+.prompts{display:flex;gap:6px;flex-wrap:wrap}
+.prompts .chip{font-weight:400;color:var(--ink)}
+.past{display:grid;gap:4px}
+.past button{border:0;background:none;text-align:left;padding:8px;border-radius:8px;display:grid;gap:2px}
+.past button:hover{background:var(--surface-2)}
+.past b{font-size:14px}
+.past span{font-size:14px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* modal */
+#modal{position:fixed;inset:0;z-index:20;background:color-mix(in srgb,#000 45%,transparent);display:grid;place-items:center;
+  padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+#modal[hidden]{display:none}
+.sheet{background:var(--bg);border-radius:16px;width:min(760px,100%);max-height:100%;overflow:auto;padding:22px;display:grid;gap:18px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.sheet-head{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.sheet-head h2{font-size:24px}
+.sheet .sec{display:grid;gap:10px}
+.sheet .sec h3{font-size:16px}
+label.f{display:grid;gap:4px;font-size:14px;font-weight:700;color:var(--muted)}
+.inp, .sheet input[type=text], .sheet input[type=date], .sheet input[type=time], .sheet select, .sheet textarea{
+  width:100%;border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:9px 11px;color:var(--ink);font-weight:400;font-size:16px;min-width:0}
+.sheet textarea{min-height:76px;resize:vertical}
+.title-inp{font-family:var(--font-d);font-size:24px !important;font-weight:700 !important;border-color:transparent !important;background:transparent !important;padding:2px 4px !important}
+.title-inp:hover,.title-inp:focus{border-color:var(--line) !important;background:var(--surface) !important}
+.fgrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.phases{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.phase{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:4px;align-content:start;min-width:0}
+.phase-h{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:0 6px}
+.coach{background:var(--accent-soft);border-radius:10px;padding:12px 14px;font-size:15px;display:grid;gap:4px}
+.warnline{font-size:13px;color:var(--warn);font-weight:700}
+.wsteps{display:grid;gap:8px}
+.wstep{display:grid;grid-template-columns:28px minmax(0,1fr) 110px 36px;gap:8px;align-items:center}
+.wstep .n{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:700;text-align:right}
+@media (max-width:520px){ .wstep{grid-template-columns:22px minmax(0,1fr) 36px} .wstep select{grid-column:2} }
+.typepick{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.typepick button{text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:14px;display:grid;gap:6px}
+.typepick button:hover{border-color:var(--tc)}
+.typepick b{font-family:var(--font-d);font-size:19px}
+.typepick span{font-size:14px;color:var(--muted)}
+.dots{display:flex;gap:6px}
+.dots i{width:24px;height:5px;border-radius:9px;background:var(--line)}
+.dots i.on{background:var(--accent)}
+.foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:14px}
+.err{color:#B3261E;font-size:14px;font-weight:700}
+.placelist{display:grid;gap:4px;max-height:320px;overflow:auto}
+.placelist button{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:9px 12px;text-align:left;display:grid;gap:1px}
+.placelist button:hover{border-color:var(--accent)}
+.placelist small{color:var(--muted)}
+
+/* timer */
+.timer{text-align:center;display:grid;gap:14px;justify-items:center;padding-block:10px}
+.timer .clock{font-family:var(--font-d);font-size:clamp(64px,16vw,104px);font-weight:500;font-variant-numeric:tabular-nums;line-height:1}
+.ring{width:220px;max-width:100%;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;
+  background:conic-gradient(var(--next) calc(var(--p,0)*1turn),var(--line) 0)}
+.ring>div{width:84%;height:84%;border-radius:50%;background:var(--bg);display:grid;place-items:center}
+
+/* sub-projects */
+.step.sub{background:color-mix(in srgb,var(--tc) 7%,transparent);border:1px dashed color-mix(in srgb,var(--tc) 45%,var(--line));align-items:center}
+.subicon{flex:none;color:var(--tc);display:grid;place-items:center;width:24px}
+.subtag{color:var(--tc);font-weight:700}
+.step.sub.done .title{text-decoration:none;color:var(--ok);font-weight:700}
+.bar.mini{height:5px;margin-top:4px}
+.bar{position:relative}
+.bar i{position:absolute;top:0;bottom:0;width:2px;background:var(--surface);z-index:1}
+.phase-ok{color:var(--ok)}
+.addrow{display:flex;gap:8px;flex-wrap:wrap}
+.addrow input{flex:1 1 200px;min-width:0}
+.addrow select{flex:0 0 auto;width:auto !important}
+.split-opts{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.split-opts .btn{border-radius:10px;text-align:left;font-weight:400}
+.split-opts b{display:block}
+.split-opts small{display:block;color:var(--muted);font-size:13px}
+.reward-f{color:var(--warn)}
+.reward-f svg{vertical-align:-2px}
+.reward-line{font-size:14px;color:var(--warn);font-weight:700;display:flex;gap:6px;align-items:center;overflow-wrap:anywhere}
+.xp-tag{color:var(--warn);font-weight:700}
+
+/* game */
+.lvl-pill{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;display:inline-flex;align-items:center;gap:8px;font-size:14px}
+.pill-bar{display:block;width:54px;height:6px;border-radius:9px;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--line);overflow:hidden}
+.pill-bar span{display:block;height:100%;background:var(--next)}
+.gstrip{text-align:left;cursor:pointer;font:inherit;color:inherit}
+.gstrip:hover{border-color:var(--next)}
+.lvl{display:grid;gap:6px;width:100%}
+.lvl-top{display:flex;justify-content:space-between;gap:10px;font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums;flex-wrap:wrap}
+.lvl-top b{color:var(--ink)}
+.lvl .bar span, .levelcard .bar span{background:var(--next)}
+.bar.big{height:14px}
+.weekdots{display:flex;gap:6px}
+.wd{flex:1;display:grid;justify-items:center;gap:4px;font-size:12px;color:var(--muted)}
+.wd i{width:100%;max-width:34px;aspect-ratio:1;border-radius:50%;border:2px dashed var(--line);display:block}
+.wd.on i{background:var(--next);border:2px solid var(--next)}
+.wd.now{color:var(--ink);font-weight:700}
+.levelcard h2{font-size:34px}
+.statrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px;border-top:1px solid var(--line);padding-top:12px}
+.statrow div{display:grid}
+.statrow b{font-family:var(--font-d);font-size:26px;font-variant-numeric:tabular-nums}
+.statrow span{font-size:13px;color:var(--muted)}
+.badges{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+.bdg{border:1px dashed var(--line);border-radius:12px;padding:12px;display:grid;gap:4px;justify-items:center;text-align:center;color:var(--muted)}
+.bdg svg{color:var(--line)}
+.bdg b{font-size:14px}
+.bdg span{font-size:12px}
+.bdg.got{border:1px solid color-mix(in srgb,var(--next) 60%,var(--line));background:var(--next-soft);color:var(--ink)}
+.bdg.got svg{color:var(--next)}
+.avail{font-weight:700;color:var(--warn);font-variant-numeric:tabular-nums}
+.rewards{display:grid;gap:6px}
+.rw{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:9px;background:var(--surface-2)}
+.rw .body{flex:1;min-width:0;display:grid}
+.rw .btn:disabled{opacity:.7;cursor:default}
+.howto{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.howto li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+.howto b{color:var(--warn);font-variant-numeric:tabular-nums;white-space:nowrap}
+#party{position:fixed;inset:0;z-index:40;background:color-mix(in srgb,#000 50%,transparent);display:grid;place-items:center;padding:16px}
+#party[hidden]{display:none}
+.party-card{background:var(--surface);border-radius:20px;padding:28px 24px;width:min(440px,100%);display:grid;gap:14px;text-align:center;justify-items:center;box-shadow:0 24px 70px rgba(0,0,0,.35)}
+.party-card h2{font-size:30px}
+.party-xp{font-family:var(--font-d);font-weight:700;color:var(--warn);font-size:20px}
+.party-reward{display:flex;gap:12px;align-items:center;text-align:left;background:var(--next-soft);border-radius:12px;padding:12px 16px;width:100%;color:var(--warn)}
+.party-reward svg{width:24px;height:24px;flex:none}
+.party-reward small{display:block;color:var(--muted)}
+.party-reward b{color:var(--ink);font-size:18px}
+.pchip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;background:var(--surface-2);border-radius:999px;padding:4px 10px;color:var(--ink)}
+.pchip svg{color:var(--next)}
+#confetti{position:fixed;inset:0;width:100%;height:100%;z-index:41;pointer-events:none}
+@media (prefers-reduced-motion:no-preference){ #party:not([hidden]) .party-card{animation:pop .4s cubic-bezier(.2,1.4,.4,1)} @keyframes pop{from{transform:scale(.85);opacity:.6}to{transform:none;opacity:1}} }
+
+/* reminders, ai, settings */
+#reminders{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));z-index:35;display:grid;gap:10px;width:min(380px,calc(100% - 24px))}
+.rem{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid color-mix(in srgb,var(--next) 60%,var(--line));border-radius:14px;padding:14px;box-shadow:0 12px 36px rgba(0,0,0,.18)}
+.rem-ic{flex:none;width:34px;height:34px;border-radius:50%;background:var(--next-soft);color:var(--warn);display:grid;place-items:center}
+.rem-ic svg{width:18px;height:18px}
+.rem-b{flex:1;min-width:0;display:grid;gap:4px}
+.rem-b span{font-size:14px;color:var(--muted);overflow-wrap:anywhere}
+@media (prefers-reduced-motion:no-preference){ .rem{animation:slidein .3s ease-out} @keyframes slidein{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}} }
+.ai{display:flex;gap:8px 12px;align-items:center;flex-wrap:wrap}
+.ai-btn{border-color:color-mix(in srgb,var(--c-admin) 50%,var(--line));color:var(--c-admin)}
+.ai-think{color:var(--c-admin);font-weight:700;display:inline-flex;gap:6px;align-items:center}
+@media (prefers-reduced-motion:no-preference){ .ai-think svg{animation:spin 1.6s linear infinite} @keyframes spin{to{transform:rotate(360deg)}} }
+.ai-done{display:grid;gap:8px;background:color-mix(in srgb,var(--c-admin) 8%,var(--surface));border:1px solid color-mix(in srgb,var(--c-admin) 35%,var(--line));border-radius:12px;padding:12px}
+.ai-head{display:flex;gap:6px;align-items:center;color:var(--c-admin)}
+.ai-head b{color:var(--ink)}
+.ai-list{display:grid;gap:4px}
+.ai-row{display:flex;gap:10px;align-items:flex-start;text-align:left;border:0;background:none;padding:6px;border-radius:8px}
+.ai-row:hover{background:var(--surface)}
+.ai-row b{display:block;font-weight:700}
+.ai-row small{display:block;color:var(--muted);font-size:13px}
+.ai-row .chk{pointer-events:none}
+.ai-row[aria-pressed="true"] .chk{background:var(--c-admin);border-color:var(--c-admin);color:#fff}
+.ai-row[aria-pressed="false"] b{color:var(--muted);text-decoration:line-through}
+.note-box{background:var(--surface-2);border-radius:10px;padding:10px 12px;font-size:14px;color:var(--muted)}
+.linkbtn{border:0;background:none;padding:0;color:var(--accent);font-weight:700;text-decoration:underline;font-size:inherit}
+label.btn{cursor:pointer}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:30;background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:999px;font-weight:700;max-width:calc(100% - 32px);text-align:center}
+.note{font-size:13px;color:var(--muted);text-align:center;margin-top:28px}
+.emptyhero{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:28px;display:grid;gap:14px;max-width:680px}
+.emptyhero h2{font-size:28px}
+.emptyhero ol{margin:0;padding-left:20px;display:grid;gap:4px;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){ .next{animation:rise .35s ease-out} @keyframes rise{from{transform:translateY(6px)}to{transform:none}} }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M3 21h6v-5h6v-5h6V5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Skref
+    </div>
+    <nav class="tabs" aria-label="Sýn">
+      <button class="tab" data-a="nav" data-v="idag">Í dag</button>
+      <button class="tab" data-a="nav" data-v="dagatal">Dagatal</button>
+      <button class="tab" data-a="nav" data-v="verkefni">Verkefni</button>
+      <button class="tab" data-a="nav" data-v="dagbok">Dagbók</button>
+      <button class="tab" data-a="nav" data-v="arangur">Árangur</button>
+    </nav>
+    <span class="spacer"></span>
+    <button class="lvl-pill" id="lvl-pill" data-a="game" aria-label="Árangur og stig"></button>
+    <button class="icon-btn" data-a="settings" aria-label="Stillingar" title="Stillingar"><svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.7 3.7l1.4 1.4M12.9 12.9l1.4 1.4M3.7 14.3l1.4-1.4M12.9 5.1l1.4-1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <button class="btn primary" data-a="new">+ Nýtt</button>
+  </div>
+</header>
+<main class="wrap" id="main"></main>
+<div id="modal" hidden><div class="sheet" role="dialog" aria-modal="true" aria-label="Glugginn"></div></div>
+<div id="toast" hidden role="status"></div>
+<div id="reminders" aria-live="polite"></div>
+<div id="party" hidden><div class="party-card" role="dialog" aria-modal="true" aria-label="Fögnuður"></div></div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<script>
+(() => {
+'use strict';
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const pad = n => String(n).padStart(2, '0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const fromISO = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (s, n) => { const d = fromISO(s); d.setDate(d.getDate() + n); return iso(d); };
+const today = () => iso(new Date());
+const mondayOf = s => { const d = fromISO(s); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return iso(d); };
+const DAYS = ['sunnudagur','mánudagur','þriðjudagur','miðvikudagur','fimmtudagur','föstudagur','laugardagur'];
+const DS = ['sun','mán','þri','mið','fim','fös','lau'];
+const MONTHS = ['janúar','febrúar','mars','apríl','maí','júní','júlí','ágúst','september','október','nóvember','desember'];
+const fmtLong = s => { const d = fromISO(s); return `${DAYS[d.getDay()]} ${d.getDate()}. ${MONTHS[d.getMonth()]}`; };
+const fmtShort = s => { const d = fromISO(s); return `${DS[d.getDay()]} ${d.getDate()}. ${MONTHS[d.getMonth()].slice(0,3)}.`; };
+const toMin = t => { const [h, m] = (t || '0:0').split(':').map(Number); return h * 60 + (m || 0); };
+const fromMin = m => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+const fmtDur = m => m < 60 ? `${m} mín` : (m % 60 ? `${Math.floor(m / 60)} klst ${m % 60} mín` : `${m / 60} klst`);
+const weekNo = s => { const d = fromISO(s); d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7); const w1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - w1) / 864e5 - 3 + (w1.getDay() + 6) % 7) / 7); };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const MINS = [5,10,15,20,30,45,60,90,120,180,240];
+const TYPES = {
+  verkefni: { label:'Verkefni', desc:'Eitthvað stórt sem þarf að brjóta niður í viðráðanleg skref.' },
+  admin:    { label:'Admin', desc:'Póstar, símtöl, umsóknir og eyðublöð sem sitja á sér.' },
+  fundur:   { label:'Fundur', desc:'Ákveðinn tími með öðru fólki.' },
+  dagskra:  { label:'Dagskrá', desc:'Fastir liðir: sækja, æfingar, viðburðir.' },
+};
+const ENERGY = { low:'Lítil orka', mid:'Miðlungs orka', high:'Mikil orka' };
+const MOODS = ['Mjög erfitt','Þungt','Allt í lagi','Gott','Mjög gott'];
+const PROMPTS = ['Hvað er að stoppa mig núna?','Hvað er minnsta skrefið sem ég get tekið?','Hvað tókst í dag, þótt það sé lítið?','Hvað var erfitt og af hverju?','Hverju má sleppa á morgun?'];
+const ICON = {
+  check:'<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  play:'<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l8 5-8 5z" fill="currentColor"/></svg>',
+  cal:'<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><rect x="2.5" y="3.5" width="13" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 7.5h13M6 2v3M12 2v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  x:'<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  gift:'<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="6" width="12" height="8" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.5 6h13M8 6v8M8 6C6 2 3 3.5 5 6M8 6c2-4 5-2.5 3 0" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>',
+  bell:'<svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true" style="vertical-align:-2px"><path d="M4 11V7a4 4 0 018 0v4l1.5 1.5h-11zM6.5 14a1.5 1.5 0 003 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+  spark:'<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l1.6 4.2 4.4 1.3-4.4 1.3L8 12.5 6.4 8.3 2 7l4.4-1.3zM13 11l.7 1.6 1.3.4-1.3.4L13 15l-.7-1.6L11 13l1.3-.4z" fill="currentColor"/></svg>',
+  gear:'<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 1.5v2M9 14.5v2M1.5 9h2M14.5 9h2M3.7 3.7l1.4 1.4M12.9 12.9l1.4 1.4M3.7 14.3l1.4-1.4M12.9 5.1l1.4-1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  tree:'<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2.5" width="8" height="5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="12" y="9" width="8" height="5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><rect x="12" y="15.5" width="8" height="5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6 7.5V18h6M6 11.5h6" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>',
+  link:'<svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M7.5 10.5l3-3M6 8.5L4.5 10a2.5 2.5 0 003.5 3.5L9.5 12M12 9.5L13.5 8A2.5 2.5 0 0010 4.5L8.5 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  medal:'<svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><path d="M13 3h5l3 9h-5zM27 3h-5l-3 9h5z" fill="currentColor" opacity=".55"/><circle cx="20" cy="25" r="11" fill="currentColor"/><path d="M20 18.5l2 4.2 4.6.6-3.4 3.2.9 4.5-4.1-2.3-4.1 2.3.9-4.5-3.4-3.2 4.6-.6z" fill="var(--surface)"/></svg>',
+};
+
+/* ---------- state ---------- */
+const S = {
+  items: [], journal: {}, loaded: false, slow: false, local: false,
+  view: 'idag', weekStart: mondayOf(today()), jDate: today(),
+  skip: new Set(), f: { min: null, energy: null }, filter: 'virkt',
+  modal: null, confirm: null,
+};
+try { const v = localStorage.getItem('skref-view'); if (v) S.view = v; } catch {}
+
+const newItem = (type, o = {}) => ({ id: uid(), type, title: '', why: '', reward: '', to: '', subject: '', more: '', date: '', start: '', end: '', notes: '', repeat: { freq: 'none', days: [], until: '' }, except: [], remind: null,
+  steps: [], dependsOn: [], parentId: null, parentStepId: null, archived: false, createdAt: Date.now(), updatedAt: Date.now(), ...o });
+const newStep = (o = {}) => ({ id: uid(), title: '', minutes: 15, energy: 'mid', done: false, doneAt: null, slot: null, remind: null, dependsOn: [], subId: null, ...o });
+const getItem = id => id ? S.items.find(i => i.id === id) : undefined;
+const getStep = (item, sid) => item?.steps.find(s => s.id === sid);
+const isEvent = it => it.type === 'fundur' || it.type === 'dagskra';
+/* a step that has been turned into a sub-project is done when that sub-project is done */
+const sd = s => { const c = s.subId && getItem(s.subId); return c ? itemDone(c) : !!s.done; };
+const itemDone = it => it.steps.length > 0 && it.steps.every(sd);
+const depsDone = (it, s) => (s.dependsOn || []).every(d => { const o = getStep(it, d); return !o || sd(o); });
+const itemUnblocked = it => {
+  if (!(it.dependsOn || []).every(id => { const o = getItem(id); return !o || o.archived || itemDone(o); })) return false;
+  const p = getItem(it.parentId); if (!p) return true;
+  const ps = getStep(p, it.parentStepId); return itemUnblocked(p) && (!ps || depsDone(p, ps));
+};
+const stepReady = (it, s) => !sd(s) && itemUnblocked(it) && depsDone(it, s);
+const active = () => S.items.filter(i => !i.archived && !rootOf(i).archived);
+const rootOf = it => { let c = it, n = 0; while (c.parentId && getItem(c.parentId) && n++ < 20) c = getItem(c.parentId); return c; };
+const crumb = it => { const p = getItem(it.parentId); return p ? `${crumb(p)} › ${it.title}` : it.title; };
+const chainOf = it => { const out = [it]; let c = it; while (getItem(c.parentId) && out.length < 20) { c = getItem(c.parentId); out.push(c); } return out; };
+const descendants = it => [it, ...it.steps.filter(s => getItem(s.subId)).flatMap(s => descendants(getItem(s.subId)))];
+const counts = it => it.steps.reduce((a, s) => { const c = getItem(s.subId); if (c) { const k = counts(c); a.n += k.n; a.d += k.d; } else { a.n++; if (s.done) a.d++; } return a; }, { n: 0, d: 0 });
+const donePhases = it => phases(it).filter(p => p.every(sd)).length;
+function phases(it) {
+  const by = new Map(it.steps.map(s => [s.id, s])), memo = new Map();
+  const lvl = (s, seen) => { if (memo.has(s.id)) return memo.get(s.id); if (seen.has(s.id)) return 0; seen.add(s.id);
+    let l = 0; for (const d of s.dependsOn || []) { const o = by.get(d); if (o) l = Math.max(l, lvl(o, seen) + 1); } memo.set(s.id, l); return l; };
+  const out = []; for (const s of it.steps) { const l = lvl(s, new Set()); (out[l] ||= []).push(s); } return out.filter(Boolean);
+}
+const reaches = (it, fromId, targetId, seen = new Set()) => { if (fromId === targetId) return true; if (seen.has(fromId)) return false; seen.add(fromId);
+  const s = getStep(it, fromId); return (s?.dependsOn || []).some(d => reaches(it, d, targetId, seen)); };
+const itemReaches = (fromId, targetId, seen = new Set()) => { if (fromId === targetId) return true; if (seen.has(fromId)) return false; seen.add(fromId);
+  return (getItem(fromId)?.dependsOn || []).some(d => itemReaches(d, targetId, seen)); };
+function readySteps() { const out = []; for (const it of active()) for (const s of it.steps) if (!getItem(s.subId) && stepReady(it, s)) out.push({ it, s }); return out; }
+function pickNext() {
+  const t = today();
+  let c = readySteps().filter(({ s }) => !S.skip.has(s.id) && !(s.slot && s.slot.date > t));
+  if (S.f.min) c = c.filter(({ s }) => s.minutes <= S.f.min);
+  if (S.f.energy) c = c.filter(({ s }) => s.energy === S.f.energy);
+  const rank = ({ s }) => s.slot?.date === t ? 0 : s.slot ? 1 : 2;
+  c.sort((a, b) => rank(a) - rank(b) || (a.s.slot && b.s.slot ? toMin(a.s.slot.start) - toMin(b.s.slot.start) : 0) || a.s.minutes - b.s.minutes || a.it.createdAt - b.it.createdAt);
+  return c[0] || null;
+}
+/* ---------- recurrence ---------- */
+const REPEATS = [['none','Endurtekst ekki'],['daily','Daglega'],['weekdays','Virka daga'],['weekly','Vikulega'],['biweekly','Aðra hverja viku'],['monthly','Mánaðarlega']];
+const REM = [['','Engin áminning'],['0','Þegar það byrjar'],['5','5 mín áður'],['10','10 mín áður'],['15','15 mín áður'],['30','30 mín áður'],['60','1 klst áður'],['1440','Daginn áður']];
+const remLabel = m => (REM.find(([v]) => v === String(m)) || [, ''])[1];
+const repDays = it => it.repeat?.days?.length ? it.repeat.days : [fromISO(it.date).getDay()];
+function occursOn(it, d) {
+  if (!it.date || d < it.date) return false;
+  const r = it.repeat || { freq: 'none' };
+  if (r.until && d > r.until) return false;
+  if ((it.except || []).includes(d)) return false;
+  const x = fromISO(d), dow = x.getDay();
+  switch (r.freq) {
+    case 'daily': return true;
+    case 'weekdays': return dow >= 1 && dow <= 5;
+    case 'weekly': return repDays(it).includes(dow);
+    case 'biweekly': return repDays(it).includes(dow) && Math.round((fromISO(mondayOf(d)) - fromISO(mondayOf(it.date))) / 6048e5) % 2 === 0;
+    case 'monthly': return x.getDate() === fromISO(it.date).getDate();
+    default: return d === it.date;
+  }
+}
+const repeatText = it => { const r = it.repeat; if (!r || r.freq === 'none') return '';
+  const base = REPEATS.find(([k]) => k === r.freq)?.[1] || '';
+  const days = (r.freq === 'weekly' || r.freq === 'biweekly') ? ' á ' + repDays(it).slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map(i => DS[i]).join(', ') : '';
+  return base + days + (r.until ? ` til ${fmtShort(r.until)}` : ''); };
+
+function agendaFor(d) {
+  const out = [];
+  for (const it of active()) {
+    if (isEvent(it) && occursOn(it, d)) out.push({ kind: 'ev', it, d, start: it.start || '', end: it.end || '' });
+    for (const s of it.steps) if (s.slot?.date === d) out.push({ kind: 'st', it, s, start: s.slot.start, end: fromMin(Math.min(toMin(s.slot.start) + s.minutes, 1439)) });
+  }
+  return out.sort((a, b) => (a.start || '99').localeCompare(b.start || '99'));
+}
+const winsOn = d => { const out = []; for (const it of S.items) for (const s of it.steps) if (s.doneAt && iso(new Date(s.doneAt)) === d) out.push({ it, s }); return out.sort((a, b) => a.s.doneAt - b.s.doneAt); };
+const overdue = () => { const t = today(), out = []; for (const it of active()) for (const s of it.steps) if (!s.done && s.slot && s.slot.date < t) out.push({ it, s }); return out; };
+const remaining = it => it.steps.reduce((a, s) => { const c = getItem(s.subId); return a + (c ? remaining(c) : s.done ? 0 : (+s.minutes || 0)); }, 0);
+
+/* ---------- game: points are derived from what is done, so unticking takes them back ---------- */
+const GDEF = () => ({ timerStarts: 0, timerDays: {}, splits: 0, rewards: [], spent: 0, seen: [], morning: '', evening: '' });
+S.game = GDEF();
+const stepXP = s => 10 + Math.min(30, Math.round((+s.minutes || 0) / 6));
+function stats() {
+  const st = { xp: 0, steps: 0, phasesDone: 0, subsDone: 0, projDone: 0, adminDone: 0, early: false, jDays: 0 };
+  for (const it of S.items) {
+    for (const s of it.steps) if (!getItem(s.subId) && s.done) { st.xp += stepXP(s); st.steps++; if (s.doneAt && new Date(s.doneAt).getHours() < 10) st.early = true; }
+    if (isEvent(it)) continue;
+    if (phases(it).length > 1) { const n = donePhases(it); st.phasesDone += n; st.xp += 25 * n; }
+    if (itemDone(it)) { if (it.parentId) { st.subsDone++; st.xp += 50; } else { st.projDone++; st.xp += 100; if (it.type === 'admin') st.adminDone++; } }
+  }
+  st.jDays = Object.values(S.journal).filter(e => e?.text?.trim()).length;
+  st.xp += st.jDays * 5 + (S.game.timerStarts || 0) * 3;
+  return st;
+}
+const LEVELS = ['Fyrstu skrefin', 'Á leiðinni', 'Á skriði', 'Í takti', 'Upp brekkuna', 'Á brúninni', 'Á tindinum', 'Ofar skýjum'];
+function level(xp) { let n = 1, base = 0, need = 100; while (xp >= base + need) { base += need; n++; need = 100 * n; } return { n, name: LEVELS[Math.min(n - 1, LEVELS.length - 1)], into: xp - base, need }; }
+function activeDays() {
+  const d = new Set(Object.keys(S.game.timerDays || {}));
+  for (const it of S.items) for (const s of it.steps) if (s.doneAt) d.add(iso(new Date(s.doneAt)));
+  for (const [k, e] of Object.entries(S.journal)) if (e?.text?.trim()) d.add(k);
+  return d;
+}
+const weekActive = () => { const ad = activeDays(), ws = mondayOf(today()); return [...Array(7)].map((_, i) => addDays(ws, i)).map(d => ({ d, on: ad.has(d) })); };
+const BADGES = [
+  { id: 'first', t: 'Fyrsta skrefið', d: 'Klára fyrsta skrefið', ok: st => st.steps >= 1 },
+  { id: 'start5', t: 'Byrjunarhetja', d: 'Ýta fimm sinnum á „Byrja í 5 mínútur“', ok: () => S.game.timerStarts >= 5 },
+  { id: 'ten', t: 'Tíu skref', d: 'Klára 10 skref', ok: st => st.steps >= 10 },
+  { id: 'phase', t: 'Áfangi í höfn', d: 'Klára heilan áfanga í verkefni', ok: st => st.phasesDone >= 1 },
+  { id: 'split', t: 'Brýtur niður', d: 'Brjóta stórt skref niður þrisvar', ok: () => S.game.splits >= 3 },
+  { id: 'sub', t: 'Undirverkefni klárað', d: 'Klára heilt undirverkefni', ok: st => st.subsDone >= 1 },
+  { id: 'admin', t: 'Admin afgreitt', d: 'Klára admin-verkefni', ok: st => st.adminDone >= 1 },
+  { id: 'early', t: 'Morgunskref', d: 'Klára skref fyrir klukkan tíu', ok: st => st.early },
+  { id: 'week', t: 'Góð vika', d: 'Fimm virkir dagar í sömu viku', ok: () => weekActive().filter(x => x.on).length >= 5 },
+  { id: 'journal', t: 'Dagbókarvenja', d: 'Skrifa í dagbókina sjö daga', ok: st => st.jDays >= 7 },
+  { id: 'project', t: 'Verkefni klárað', d: 'Klára heilt verkefni', ok: st => st.projDone >= 1 },
+  { id: 'fifty', t: 'Fimmtíu skref', d: 'Klára 50 skref', ok: st => st.steps >= 50 },
+];
+const earned = st => BADGES.filter(b => (S.game.seen || []).includes(b.id) || b.ok(st));
+function newBadges(st) { const fresh = BADGES.filter(b => !(S.game.seen || []).includes(b.id) && b.ok(st)); if (fresh.length) { S.game.seen = [...(S.game.seen || []), ...fresh.map(b => b.id)]; store.saveGame(); } return fresh; }
+
+/* ---------- store: claude db, with a browser fallback ---------- */
+const store = {
+  mode: 'local', q: new Map(), busy: new Set(), itemsCol: null, jCol: null,
+  async init() {
+    let db = null, user = null, id = null;
+    try { if (window.claude?.use) [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]); } catch {}
+    try { id = user ? await user.id() : null; } catch {}
+    if (!db || !id) return this.initLocal();
+    this.mode = 'db';
+    const base = db.doc(`data/users/${id}/profile`);
+    this.itemsCol = base.collection('items'); this.jCol = base.collection('journal'); this.gRef = base.collection('meta').doc('game');
+    this.gRef.onSnapshot(snap => { if (this.q.has('g')) return; S.game = { ...GDEF(), ...(snap.exists ? structuredClone(snap.data()) : {}) }; render(); }, () => {});
+    let gi = false, gj = false;
+    const timer = setTimeout(() => { if (!(gi && gj)) { S.slow = true; render(); } }, 10000);
+    const settle = () => { if (gi && gj) { clearTimeout(timer); S.slow = false; } };
+    this.itemsCol.onSnapshot(snap => {
+      const map = new Map(snap.docs.map(d => [d.id, { ...structuredClone(d.data()), id: d.id }]));
+      for (const [k, v] of this.q) if (k.startsWith('i:')) { const iid = k.slice(2); v.val === null ? map.delete(iid) : map.set(iid, structuredClone(v.val)); }
+      S.items = [...map.values()].map(normalize);
+      S.loaded = true; if (!snap.metadata.fromCache) gi = true; settle(); render(); refreshModalIfSafe();
+    }, () => { S.loaded = true; S.slow = true; clearTimeout(timer); render(); });
+    this.jCol.onSnapshot(snap => {
+      const j = {}; for (const d of snap.docs) j[d.id] = structuredClone(d.data());
+      for (const [k, v] of this.q) if (k.startsWith('j:')) j[k.slice(2)] = structuredClone(v.val);
+      S.journal = j; if (!snap.metadata.fromCache) gj = true; settle();
+      if (S.view === 'dagbok') render();
+    }, () => {});
+  },
+  initLocal() {
+    this.mode = 'local'; S.local = true;
+    try { const raw = localStorage.getItem('skref-data'); if (raw) { const d = JSON.parse(raw); S.items = (d.items || []).map(normalize); S.journal = d.journal || {}; S.game = { ...GDEF(), ...(d.game || {}) }; } } catch {}
+    S.loaded = true; render();
+  },
+  persistLocal() { try { localStorage.setItem('skref-data', JSON.stringify({ items: S.items, journal: S.journal, game: S.game })); } catch {} },
+  saveGame() { if (this.mode === 'db') this.put('g', this.gRef, JSON.parse(JSON.stringify(S.game))); else this.persistLocal(); },
+  put(key, ref, val) { this.q.set(key, { ref, val }); this.flush(key); },
+  async flush(key) {
+    if (this.busy.has(key)) return; this.busy.add(key);
+    while (this.q.has(key)) {
+      const { ref, val } = this.q.get(key); this.q.delete(key);
+      const run = () => val === null ? ref.delete() : ref.set(val);
+      try { await run(); }
+      catch (e) {
+        if (e?.code === 'unavailable') { await sleep(600 + Math.random() * 900); try { await run(); } catch { toast('Ekki tókst að vista. Reyndu aftur eftir smá stund.'); } }
+        else if (e?.code === 'quota_exceeded') toast('Geymslan er full. Eyddu gömlum verkefnum til að búa til pláss.');
+        else toast('Ekki tókst að vista breytinguna.');
+      }
+    }
+    this.busy.delete(key);
+  },
+  saveItem(it) {
+    it.updatedAt = Date.now();
+    const i = S.items.findIndex(x => x.id === it.id); if (i < 0) S.items.push(it); else S.items[i] = it;
+    if (this.mode === 'db') this.put('i:' + it.id, this.itemsCol.doc(it.id), JSON.parse(JSON.stringify(it))); else this.persistLocal();
+  },
+  deleteItem(id) {
+    const it = getItem(id); if (!it) return;
+    for (const s of it.steps) if (getItem(s.subId)) this.deleteItem(s.subId);
+    const p = getItem(it.parentId), ps = getStep(p, it.parentStepId);
+    if (ps) { ps.subId = null; this.saveItem(p); }
+    S.items = S.items.filter(x => x.id !== id);
+    for (const o of S.items) if (o.dependsOn?.includes(id)) { o.dependsOn = o.dependsOn.filter(d => d !== id); this.saveItem(o); }
+    if (this.mode === 'db') this.put('i:' + id, this.itemsCol.doc(id), null); else this.persistLocal();
+  },
+  saveJournal(date, entry) {
+    S.journal[date] = entry;
+    if (this.mode === 'db') this.put('j:' + date, this.jCol.doc(date), entry); else this.persistLocal();
+  },
+};
+function normalize(it) {
+  it.steps = (it.steps || []).map(s => ({ ...newStep(), ...s, dependsOn: s.dependsOn || [] }));
+  it.dependsOn = it.dependsOn || [];
+  return { ...newItem(it.type || 'verkefni'), ...it };
+}
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3200); }
+
+/* ---------- shared bits ---------- */
+const chk = (it, s, disabled) => `<button class="chk" aria-pressed="${s.done}" aria-label="${s.done ? 'Merkja óklárað' : 'Merkja klárað'}: ${esc(s.title)}" data-a="done" data-i="${it.id}" data-s="${s.id}" ${disabled ? 'disabled' : ''}>${ICON.check}</button>`;
+function stepMeta(it, s, showItem) {
+  const bits = [];
+  if (showItem) bits.push(`<span class="badge t-${it.type}">${esc(crumb(it) || TYPES[it.type].label)}</span>`);
+  bits.push(`<span>${fmtDur(s.minutes)}</span>`);
+  if (s.energy) bits.push(`<span>${ENERGY[s.energy]}</span>`);
+  if (s.slot) bits.push(`<span class="slotchip">${s.slot.date === today() ? 'Í dag' : fmtShort(s.slot.date)} kl. ${esc(s.slot.start)}</span>`);
+  bits.push(waitText(it, s));
+  return bits.join('');
+}
+function waitText(it, s) {
+  if (sd(s)) return '';
+  const waits = (s.dependsOn || []).map(d => getStep(it, d)).filter(o => o && !sd(o));
+  return waits.length ? `<span>eftir: ${waits.map(o => esc(o.title)).join(', ')}</span>` : '';
+}
+function stepRow(it, s, { showItem = false, actions = true } = {}) {
+  const ready = stepReady(it, s), child = getItem(s.subId);
+  if (child) {
+    const c = counts(child), done = sd(s);
+    return `<div class="step sub t-${child.type} ${done ? 'done' : ready ? 'ready' : 'waiting'}">
+      <span class="subicon" aria-hidden="true">${ICON.tree}</span>
+      <div class="body"><button class="title" data-a="open" data-i="${child.id}">${esc(s.title)}</button>
+        <div class="meta"><span class="subtag">Undirverkefni</span><span>${c.d} af ${c.n} skrefum</span>${waitText(it, s)}</div>
+        <div class="bar mini"><span style="width:${c.n ? Math.round(c.d / c.n * 100) : 0}%"></span></div></div>
+      <button class="icon-btn" data-a="edit-step" data-i="${it.id}" data-s="${s.id}" title="Tengingar skrefsins" aria-label="Breyta tengingum: ${esc(s.title)}">${ICON.link}</button>
+      <button class="icon-btn" data-a="open" data-i="${child.id}" aria-label="Opna undirverkefnið ${esc(s.title)}">›</button>
+    </div>`;
+  }
+  return `<div class="step ${s.done ? 'done' : ready ? 'ready' : 'waiting'}">
+    ${chk(it, s, !s.done && !ready)}
+    <div class="body"><button class="title" data-a="edit-step" data-i="${it.id}" data-s="${s.id}">${esc(s.title)}</button><div class="meta">${stepMeta(it, s, showItem)}</div></div>
+    ${actions && !s.done && ready ? `<button class="icon-btn" title="Setja í dagatal" aria-label="Setja í dagatal" data-a="sched" data-i="${it.id}" data-s="${s.id}">${ICON.cal}</button>
+    <button class="icon-btn" title="Byrja í 5 mínútur" aria-label="Byrja í 5 mínútur" data-a="timer" data-i="${it.id}" data-s="${s.id}">${ICON.play}</button>` : ''}
+  </div>`;
+}
+const localNote = () => !S.local ? '' : P.inClaude ? `<p class="note">Gögnin vistast aðeins í þessum vafra. Opnaðu appið innskráð/ur á claude.ai til að þau fylgi þér á milli tækja.</p>`
+  : `<p class="note">Gögnin vistast á þessu tæki. Taktu afrit af og til í <button class="linkbtn" data-a="settings">stillingum</button>.</p>`;
+const slowNote = () => S.slow ? `<p class="note">Næ ekki sambandi við gögnin þín í augnablikinu. Það sem birtist gæti verið gamalt.</p>` : '';
+
+/* ---------- views ---------- */
+function emptyHero() {
+  return `<section class="emptyhero">
+    <p class="eyebrow">Byrjum smátt</p>
+    <h2>Settu inn fyrsta verkefnið, eða byrjaðu á dæmunum þínum</h2>
+    <p>Appið spyr þig hvaða skref eru í verkefninu, hvað þau taka langan tíma og hvað þarf að gerast á undan hverju. Svo sýnir það þér bara eitt skref í einu.</p>
+    <ol><li>Taka eldhúsið í gegn, með átta skrefum og tengingum milli þeirra</li><li>Admin: segja upp áskrift sem er ekki notuð lengur</li></ol>
+    <div class="row"><button class="btn primary" data-a="new">+ Búa til verkefni</button><button class="btn" data-a="seed">Setja inn dæmin</button></div>
+  </section>`;
+}
+function viewToday() {
+  const t = today(), h = new Date().getHours();
+  const greet = h < 11 ? 'Góðan daginn' : h < 18 ? 'Góðan dag' : 'Gott kvöld';
+  const head = `<section class="hello"><p class="eyebrow">${greet} · ${fmtLong(t)}</p><h1>Eitt lítið skref er nóg til að byrja.</h1></section>`;
+  if (!S.items.length) return head + emptyHero() + localNote();
+  const nx = pickNext();
+  const ready = readySteps().filter(({ s }) => !s.slot);
+  const agenda = agendaFor(t), od = overdue(), wins = winsOn(t);
+  const nextHtml = nx ? `<section class="next">
+      <p class="label">Næsta skref</p>
+      <h2>${esc(nx.s.title)}</h2>
+      <p class="meta"><span class="badge t-${nx.it.type}">${esc(crumb(nx.it))}</span><span class="xp-tag">+${stepXP(nx.s)} stig</span><span>${fmtDur(nx.s.minutes)}</span><span>${ENERGY[nx.s.energy] || ''}</span>${nx.s.slot ? `<span class="slotchip">kl. ${esc(nx.s.slot.start)}</span>` : ''}</p>
+      <div class="row">
+        <button class="btn go" data-a="timer" data-i="${nx.it.id}" data-s="${nx.s.id}">${ICON.play} Byrja í 5 mínútur</button>
+        <button class="btn" data-a="done" data-i="${nx.it.id}" data-s="${nx.s.id}">${ICON.check} Klárað</button>
+        <button class="btn ghost" data-a="skip" data-s="${nx.s.id}">Annað skref</button>
+        ${nx.s.minutes >= 45 ? `<button class="btn ghost" data-a="edit-step" data-split="1" data-i="${nx.it.id}" data-s="${nx.s.id}">Of stórt? Brjóta niður</button>` : ''}
+      </div>
+      <p class="hint">Þú þarft ekki að klára. Fimm mínútur telja.</p>
+    </section>`
+    : `<section class="next"><p class="label">Næsta skref</p><h2>${readySteps().length ? 'Ekkert skref passar við síuna' : 'Ekkert skref bíður'}</h2>
+       <p class="hint">${readySteps().length ? 'Prófaðu að breyta tíma eða orku hér fyrir neðan.' : 'Allt sem er tilbúið er klárað. Bættu við verkefni eða hvíldu þig.'}</p>
+       ${S.skip.size ? `<div class="row"><button class="btn" data-a="unskip">Sýna aftur skrefin sem ég sleppti</button></div>` : ''}</section>`;
+  const filters = `<section class="panel"><div class="panel-head"><h2>Hvað ræð ég við núna?</h2></div>
+    <div class="row"><span class="sub">Tími:</span>${[[10,'10 mín'],[30,'30 mín'],[60,'1 klst'],[null,'Skiptir ekki']].map(([v,l]) => `<button class="chip" data-a="fmin" data-v="${v ?? ''}" aria-pressed="${S.f.min === v}">${l}</button>`).join('')}</div>
+    <div class="row"><span class="sub">Orka:</span>${[['low','Lítil'],['mid','Miðlungs'],['high','Mikil'],[null,'Skiptir ekki']].map(([v,l]) => `<button class="chip" data-a="fen" data-v="${v ?? ''}" aria-pressed="${S.f.energy === v}">${l}</button>`).join('')}</div></section>`;
+  const groups = new Map(); for (const r of ready) { if (!groups.has(r.it.id)) groups.set(r.it.id, []); groups.get(r.it.id).push(r); }
+  const readyHtml = `<section class="panel"><div class="panel-head"><h2>Tilbúið að vinna</h2><span class="sub">${ready.length} skref sem ekkert bíður eftir</span></div>
+    ${ready.length ? [...groups.values()].map(g => `<div class="group-title"><span class="badge t-${g[0].it.type}">${esc(crumb(g[0].it))}</span></div><div class="steps">${g.map(r => stepRow(r.it, r.s)).join('')}</div>`).join('')
+      : `<p class="empty-line">Ekkert óraðað skref er tilbúið.</p>`}</section>`;
+  const agendaHtml = `<section class="panel"><div class="panel-head"><h2>Dagurinn</h2><button class="btn sm" data-a="new" data-type="fundur" data-date="${t}">+ Fundur eða dagskrá</button></div>
+    ${agenda.length ? `<div class="agenda">${agenda.map(a => `<div class="ag t-${a.it.type}"><time>${esc(a.start || '–')}</time><div>
+      ${a.kind === 'ev' ? `<button class="t" data-a="open" data-i="${a.it.id}" data-d="${a.d}">${esc(a.it.title)}</button><div class="s">${TYPES[a.it.type].label}${a.end ? ` til ${esc(a.end)}` : ''}${repeatText(a.it) ? ` · ${esc(repeatText(a.it))}` : ''}${a.it.remind != null ? ` · ${ICON.bell} ${remLabel(a.it.remind)}` : ''}</div>`
+        : `<div class="row" style="gap:8px;flex-wrap:nowrap">${chk(a.it, a.s, !a.s.done && !stepReady(a.it, a.s))}<button class="t" data-a="edit-step" data-i="${a.it.id}" data-s="${a.s.id}" style="${a.s.done ? 'text-decoration:line-through;color:var(--muted)' : ''}">${esc(a.s.title)}</button></div><div class="s">${esc(crumb(a.it))} · ${fmtDur(a.s.minutes)}${a.s.remind != null ? ` · ${ICON.bell} ${remLabel(a.s.remind)}` : ''}</div>`}
+      </div></div>`).join('')}</div>` : `<p class="empty-line">Ekkert á dagskrá í dag. Þú getur sett skref á tíma í dagatalinu.</p>`}</section>`;
+  const odHtml = od.length ? `<section class="panel"><div class="panel-head"><h2>Frá fyrri dögum</h2></div><p class="sub">Þessi skref voru sett á dag sem er liðinn. Það er í lagi. Veldu nýjan tíma eða losaðu þau úr dagatalinu.</p>
+    <div class="steps">${od.map(({ it, s }) => `<div class="step"><div class="body"><span class="title" style="font-weight:700">${esc(s.title)}</span><div class="meta"><span>${esc(it.title)}</span><span>${fmtShort(s.slot.date)}</span></div></div>
+      <button class="btn sm" data-a="sched" data-i="${it.id}" data-s="${s.id}">Nýr tími</button><button class="btn sm ghost" data-a="unslot" data-i="${it.id}" data-s="${s.id}">Losa</button></div>`).join('')}</div></section>` : '';
+  const winsHtml = `<section class="panel"><div class="panel-head"><h2>Tókst í dag</h2>${wins.length ? `<span class="sub">${wins.length} skref</span>` : ''}</div>
+    ${wins.length ? `<div class="steps">${wins.map(({ it, s }) => stepRow(it, s, { showItem: true, actions: false })).join('')}</div>` : `<p class="empty-line">Fyrsta klárað skref dagsins birtist hér.</p>`}</section>`;
+  return head + `<div class="grid2"><div class="col">${nextHtml}${filters}${readyHtml}</div><div class="col">${gameStrip()}${agendaHtml}${odHtml}${winsHtml}</div></div>` + slowNote() + localNote();
+}
+
+const H0 = 7, H1 = 23;
+function layoutBlocks(blocks) {
+  blocks.sort((a, b) => a.s - b.s || b.e - a.e);
+  let cluster = [], end = -1;
+  const finish = () => { const lanes = []; for (const b of cluster) { let l = lanes.findIndex(e => e <= b.s); if (l < 0) { l = lanes.length; lanes.push(0); } lanes[l] = b.e; b.lane = l; } cluster.forEach(b => b.n = lanes.length); };
+  for (const b of blocks) { if (b.s >= end && cluster.length) { finish(); cluster = []; } cluster.push(b); end = Math.max(end, b.e); }
+  if (cluster.length) finish(); return blocks;
+}
+function viewCal() {
+  const ws = S.weekStart, days = [...Array(7)].map((_, i) => addDays(ws, i)), t = today();
+  const d0 = fromISO(days[0]), d6 = fromISO(days[6]);
+  const range = d0.getMonth() === d6.getMonth() ? `${d0.getDate()}.–${d6.getDate()}. ${MONTHS[d6.getMonth()]}` : `${d0.getDate()}. ${MONTHS[d0.getMonth()]} – ${d6.getDate()}. ${MONTHS[d6.getMonth()]}`;
+  const hp = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour')) || 46;
+  const cols = days.map(d => {
+    const blocks = agendaFor(d).filter(a => a.start).map(a => {
+      const s = Math.max(toMin(a.start), H0 * 60), e0 = a.end ? toMin(a.end) : toMin(a.start) + 60;
+      return { a, s, e: Math.max(Math.min(e0, H1 * 60), s + 25) };
+    }).filter(b => b.s < H1 * 60);
+    layoutBlocks(blocks);
+    const cells = [...Array(H1 - H0)].map((_, i) => `<button class="cell" aria-label="${fmtShort(d)} kl. ${pad(H0 + i)}:00" data-a="slot" data-d="${d}" data-h="${H0 + i}"></button>`).join('');
+    const bl = blocks.map(b => {
+      const top = (b.s - H0 * 60) / 60 * hp, h = Math.max((b.e - b.s) / 60 * hp - 2, 22), w = 100 / b.n;
+      const st = `top:${top}px;height:${h}px;left:calc(${b.lane * w}% + 2px);width:calc(${w}% - 4px)`;
+      const a = b.a;
+      return a.kind === 'ev'
+        ? `<button class="blk t-${a.it.type}" style="${st}" data-a="open" data-i="${a.it.id}" data-d="${a.d}"><b>${a.it.repeat?.freq && a.it.repeat.freq !== 'none' ? '↻ ' : ''}${esc(a.it.title)}</b><span>${esc(a.start)}${a.end ? '–' + esc(a.end) : ''}</span></button>`
+        : `<button class="blk step t-${a.it.type} ${a.s.done ? 'done' : ''}" style="${st}" data-a="edit-step" data-i="${a.it.id}" data-s="${a.s.id}"><b>${esc(a.s.title)}</b><span>${esc(a.start)} · ${esc(a.it.title)}</span></button>`;
+    }).join('');
+    return `<div class="dcol ${d === t ? 'today' : ''}">${cells}${bl}</div>`;
+  }).join('');
+  const unsched = readySteps().filter(({ s }) => !s.slot);
+  const waiting = []; for (const it of active()) for (const s of it.steps) if (!sd(s) && !s.slot && !getItem(s.subId) && !stepReady(it, s)) waiting.push({ it, s });
+  return `<div class="cal-head"><div><p class="eyebrow">Vika ${weekNo(ws)}</p><h1>${range}</h1></div>
+      <div class="row"><button class="btn sm" data-a="wk" data-v="-1" aria-label="Fyrri vika">‹ Fyrri</button><button class="btn sm" data-a="wk" data-v="0">Þessi vika</button><button class="btn sm" data-a="wk" data-v="1" aria-label="Næsta vika">Næsta ›</button></div></div>
+    <div class="grid2 calgrid">
+      <div class="cal-scroll"><div class="cal">
+        <div class="dh"></div>${days.map(d => { const x = fromISO(d); return `<div class="dh ${d === t ? 'today' : ''}">${DS[x.getDay()]}<b>${x.getDate()}</b></div>`; }).join('')}
+        <div class="hours">${[...Array(H1 - H0)].map((_, i) => `<div>${i ? pad(H0 + i) + ':00' : ''}</div>`).join('')}</div>${cols}
+      </div></div>
+      <div class="col">
+        <section class="panel"><div class="panel-head"><h2>Óraðað</h2><span class="sub">${unsched.length} tilbúin</span></div>
+          <p class="sub">Smelltu á tíma í dagatalinu til að setja skref þar, eða notaðu dagatalstáknið.</p>
+          ${unsched.length ? `<div class="steps">${unsched.map(({ it, s }) => stepRow(it, s, { showItem: true })).join('')}</div>` : `<p class="empty-line">Ekkert óraðað skref er tilbúið.</p>`}
+        </section>
+        ${waiting.length ? `<section class="panel"><div class="panel-head"><h2>Bíða eftir öðru</h2><span class="sub">${waiting.length}</span></div><p class="sub">Þessi verða tilbúin þegar skrefin á undan klárast.</p>
+          <div class="steps">${waiting.slice(0, 12).map(({ it, s }) => stepRow(it, s, { showItem: true })).join('')}</div></section>` : ''}
+      </div>
+    </div>` + slowNote() + localNote();
+}
+
+function viewProjects() {
+  const F = [['virkt','Í gangi'],['verkefni','Verkefni'],['admin','Admin'],['vidburdir','Fundir og dagskrá'],['geymt','Klárað og geymt']];
+  let list = S.items.filter(i => !getItem(i.parentId));
+  if (S.filter === 'geymt') list = list.filter(i => i.archived);
+  else { list = list.filter(i => !i.archived);
+    if (S.filter === 'verkefni' || S.filter === 'admin') list = list.filter(i => i.type === S.filter);
+    if (S.filter === 'vidburdir') list = list.filter(isEvent); }
+  list.sort((a, b) => (isEvent(a) - isEvent(b)) || (isEvent(a) ? (a.date + a.start).localeCompare(b.date + b.start) : a.createdAt - b.createdAt));
+  const card = it => {
+    const { d: done, n } = counts(it);
+    const ready = descendants(it).flatMap(c => c.steps.filter(s => !getItem(s.subId) && stepReady(c, s)));
+    const ph = phases(it), phd = donePhases(it), subs = descendants(it).length - 1;
+    const blockers = (it.dependsOn || []).map(getItem).filter(o => o && !o.archived && !itemDone(o));
+    const rem = remaining(it);
+    return `<button class="card t-${it.type}" data-a="open" data-i="${it.id}">
+      <span class="badge">${TYPES[it.type].label}</span>
+      <h3>${esc(it.title)}</h3>
+      ${isEvent(it) ? `<p class="meta">${repeatText(it) ? `↻ ${esc(repeatText(it))}, frá ${fmtShort(it.date)}` : it.date ? fmtLong(it.date) : 'Engin dagsetning'}${it.start ? ` · kl. ${esc(it.start)}${it.end ? '–' + esc(it.end) : ''}` : ''}${it.remind != null ? ` · ${ICON.bell} ${remLabel(it.remind)}` : ''}</p>` : ''}
+      ${n ? `<div class="bar">${ph.length > 1 ? ph.slice(1).map((_, i) => `<i style="left:${(i + 1) / ph.length * 100}%"></i>`).join('') : ''}<span style="width:${Math.round(done / n * 100)}%"></span></div>
+        <p class="meta">${done} af ${n} skrefum${ph.length > 1 ? ` · áfangi ${Math.min(phd + 1, ph.length)} af ${ph.length}` : ''}${subs ? ` · ${subs} undirverkefni` : ''}${rem ? ` · u.þ.b. ${fmtDur(rem)} eftir` : ''}</p>` : ''}
+      ${it.reward && !isEvent(it) ? `<p class="reward-line">${ICON.gift} ${esc(it.reward)}</p>` : ''}
+      ${blockers.length ? `<p class="waitline">Bíður eftir: ${blockers.map(o => esc(o.title)).join(', ')}</p>`
+        : ready.length ? `<p class="nextline">Næst: <b>${esc(ready[0].title)}</b>${ready.length > 1 ? ` <span class="sub">og ${ready.length - 1} í viðbót samhliða</span>` : ''}</p>`
+        : n && done === n ? `<p class="nextline" style="color:var(--ok);font-weight:700">Öll skref kláruð</p>` : ''}
+    </button>`;
+  };
+  return `<section class="hello"><p class="eyebrow">Yfirlit</p><h1>Verkefni, admin og dagskrá</h1></section>
+    <div class="row" style="margin-bottom:16px">${F.map(([k, l]) => `<button class="chip" data-a="filter" data-v="${k}" aria-pressed="${S.filter === k}">${l}</button>`).join('')}</div>
+    ${!S.items.length ? emptyHero() : list.length ? `<div class="cards">${list.map(card).join('')}</div>` : `<p class="empty-line">Ekkert hér ennþá.</p>`}` + slowNote() + localNote();
+}
+
+function viewJournal() {
+  const d = S.jDate, e = S.journal[d] || {};
+  return `<div class="grid2">
+    <section class="paper">
+      <div class="datenav"><button class="icon-btn" data-a="jd" data-v="-1" aria-label="Fyrri dagur">‹</button><h1>${fmtLong(d)}</h1>
+        <button class="icon-btn" data-a="jd" data-v="1" aria-label="Næsti dagur">›</button>${d !== today() ? `<button class="btn sm" data-a="jd" data-v="0">Í dag</button>` : ''}</div>
+      <div class="row"><span class="field-label">Líðan</span>${MOODS.map((m, i) => `<button class="chip" data-a="mood" data-v="${i + 1}" aria-pressed="${e.mood === i + 1}">${m}</button>`).join('')}</div>
+      <div class="row"><span class="field-label">Orka</span>${Object.entries(ENERGY).map(([k, l]) => `<button class="chip" data-a="jen" data-v="${k}" aria-pressed="${e.energy === k}">${l.replace(' orka', '')}</button>`).join('')}</div>
+      <textarea id="j-text" aria-label="Dagbókarfærsla" placeholder="Skrifaðu það sem er á huga þínum. Það þarf ekki að vera fallegt.">${esc(e.text || '')}</textarea>
+      <div class="prompts">${PROMPTS.map((p, i) => `<button class="chip" data-a="prompt" data-v="${i}">${esc(p)}</button>`).join('')}</div>
+      <p class="save-state" id="j-state">${e.updatedAt ? `Vistað kl. ${fromMin(new Date(e.updatedAt).getHours() * 60 + new Date(e.updatedAt).getMinutes())}` : 'Vistast sjálfkrafa'}</p>
+    </section>
+    <aside class="col" id="j-side">${journalSide()}</aside>
+  </div>` + slowNote() + localNote();
+}
+function journalSide() {
+  const d = S.jDate, wins = winsOn(d), ag = agendaFor(d).filter(a => a.kind === 'ev');
+  const past = Object.entries(S.journal).filter(([k, v]) => v?.text?.trim()).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 14);
+  return `<section class="panel"><h2>Það sem tókst</h2>${wins.length ? `<div class="steps">${wins.map(({ it, s }) => stepRow(it, s, { showItem: true, actions: false })).join('')}</div>` : `<p class="empty-line">Engin kláruð skref skráð þennan dag.</p>`}</section>
+    ${ag.length ? `<section class="panel"><h2>Á dagskrá</h2><div class="agenda">${ag.map(a => `<div class="ag t-${a.it.type}"><time>${esc(a.start || '–')}</time><div class="t">${esc(a.it.title)}</div></div>`).join('')}</div></section>` : ''}
+    <section class="panel"><h2>Fyrri færslur</h2>${past.length ? `<div class="past">${past.map(([k, v]) => `<button data-a="jgo" data-v="${k}"><b>${fmtLong(k)}${v.mood ? ` · ${MOODS[v.mood - 1]}` : ''}</b><span>${esc(v.text.slice(0, 90))}</span></button>`).join('')}</div>` : `<p class="empty-line">Færslurnar þínar birtast hér.</p>`}</section>`;
+}
+
+function weekDots() {
+  return `<div class="weekdots">${weekActive().map(({ d, on }) => `<span class="wd ${on ? 'on' : ''} ${d === today() ? 'now' : ''}" title="${fmtLong(d)}${on ? ': virkur dagur' : ''}"><i></i>${DS[fromISO(d).getDay()]}</span>`).join('')}</div>`;
+}
+function gameStrip() {
+  const st = stats(), lv = level(st.xp), wk = weekActive().filter(x => x.on).length;
+  return `<button class="panel gstrip" data-a="game">
+    <div class="lvl"><div class="lvl-top"><span><b>Stig ${lv.n}</b> · ${esc(lv.name)}</span><span>${lv.into} / ${lv.need} stig</span></div><div class="bar"><span style="width:${Math.round(lv.into / lv.need * 100)}%"></span></div></div>
+    ${weekDots()}<span class="sub">${wk ? `${wk} ${wk === 1 ? 'virkur dagur' : 'virkir dagar'} í þessari viku. Hver dagur telur, enginn dagur tapast.` : 'Eitt skref í dag gerir þennan dag virkan.'}</span></button>`;
+}
+function viewGame() {
+  const st = stats(), lv = level(st.xp), got = earned(st).map(b => b.id), avail = Math.max(0, st.xp - (S.game.spent || 0));
+  const rewards = S.game.rewards || [];
+  const SUG = ['Kaffibolli á kaffihúsi', 'Einn þáttur í sjónvarpinu', 'Langt bað', 'Kaupa mér eitthvað smátt', 'Bíókvöld'];
+  return `<section class="hello"><p class="eyebrow">Árangur</p><h1>Allt sem þú hefur klárað safnast upp.</h1></section>
+  <div class="grid2"><div class="col">
+    <section class="panel levelcard"><p class="eyebrow">Stig ${lv.n}</p><h2>${esc(lv.name)}</h2>
+      <div class="lvl"><div class="bar big"><span style="width:${Math.round(lv.into / lv.need * 100)}%"></span></div><div class="lvl-top"><span>${lv.into} af ${lv.need} stigum að næsta stigi</span><span>${st.xp} stig alls</span></div></div>
+      <div class="statrow"><div><b>${st.steps}</b><span>skref</span></div><div><b>${st.phasesDone}</b><span>áfangar</span></div><div><b>${st.subsDone}</b><span>undirverkefni</span></div><div><b>${st.projDone}</b><span>verkefni</span></div><div><b>${S.game.timerStarts || 0}</b><span>byrjanir</span></div></div>
+    </section>
+    <section class="panel"><div class="panel-head"><h2>Þessi vika</h2></div>${weekDots()}<p class="sub">Dagur verður virkur þegar þú klárar skref, ýtir á „Byrja“ eða skrifar í dagbókina. Það er engin keðja sem slitnar.</p></section>
+    <section class="panel"><div class="panel-head"><h2>Merki</h2><span class="sub">${got.length} af ${BADGES.length}</span></div>
+      <div class="badges">${BADGES.map(b => `<div class="bdg ${got.includes(b.id) ? 'got' : ''}">${ICON.medal}<b>${esc(b.t)}</b><span>${esc(b.d)}</span></div>`).join('')}</div></section>
+  </div><div class="col">
+    <section class="panel"><div class="panel-head"><h2>Verðlaunabúðin</h2><span class="avail">${avail} stig til að nota</span></div>
+      <p class="sub">Búðu til þín eigin verðlaun og innleystu þau fyrir stig. Stigin sem þú notar hafa ekki áhrif á stigið þitt.</p>
+      ${rewards.length ? `<div class="rewards">${rewards.map(r => `<div class="rw"><div class="body"><b>${esc(r.title)}</b><span class="sub">${r.cost} stig${r.redeemed?.length ? ` · innleyst ${r.redeemed.length}×` : ''}</span>
+          ${avail < r.cost ? `<div class="bar mini"><span style="width:${Math.round(avail / r.cost * 100)}%"></span></div>` : ''}</div>
+          <button class="btn sm ${avail >= r.cost ? 'go' : ''}" data-a="rw-redeem" data-v="${r.id}" ${avail >= r.cost ? '' : 'disabled'}>${avail >= r.cost ? 'Innleysa' : `${r.cost - avail} eftir`}</button>
+          <button class="icon-btn" data-a="rw-del" data-v="${r.id}" aria-label="Eyða verðlaunum: ${esc(r.title)}">${ICON.x}</button></div>`).join('')}</div>`
+        : `<p class="empty-line">Engin verðlaun ennþá. Hvað myndi gleðja þig?</p>`}
+      <div class="addrow"><input type="text" id="rw-title" class="inp" placeholder="Til dæmis: bíókvöld" aria-label="Ný verðlaun">
+        <select id="rw-cost" class="inp" aria-label="Verð í stigum">${[50, 100, 200, 300, 500, 1000].map(c => `<option value="${c}" ${c === 200 ? 'selected' : ''}>${c} stig</option>`).join('')}</select>
+        <button class="btn sm primary" data-a="rw-add">Bæta við</button></div>
+      <div class="prompts">${SUG.map(t => `<button class="chip" data-a="rw-suggest" data-v="${esc(t)}">${esc(t)}</button>`).join('')}</div>
+    </section>
+    <section class="panel"><h2>Hvernig fæ ég stig?</h2>
+      <ul class="howto"><li><span>Byrja í 5 mínútur</span><b>+3</b></li><li><span>Klára skref</span><b>+10 til +40</b></li><li><span>Skrifa í dagbókina (á dag)</span><b>+5</b></li><li><span>Klára áfanga</span><b>+25</b></li><li><span>Klára undirverkefni</span><b>+50</b></li><li><span>Klára verkefni</span><b>+100</b></li></ul>
+      <p class="sub">Lengri skref gefa fleiri stig. Ef þú afmerkir skref fara stigin til baka.</p></section>
+  </div></div>` + slowNote() + localNote();
+}
+
+function render() {
+  document.querySelectorAll('[data-a="nav"]').forEach(b => b.setAttribute('aria-current', b.dataset.v === S.view ? 'page' : 'false'));
+  const m = $('#main');
+  if (!S.loaded) { m.innerHTML = `<section class="hello"><p class="eyebrow">Skref</p><h1>Sæki verkefnin þín…</h1></section>${slowNote()}`; return; }
+  if (S.view === 'dagbok' && document.activeElement?.id === 'j-text') { const side = $('#j-side'); if (side) side.innerHTML = journalSide(); return; }
+  const y = window.scrollY;
+  m.innerHTML = ({ idag: viewToday, dagatal: viewCal, verkefni: viewProjects, dagbok: viewJournal, arangur: viewGame }[S.view] || viewToday)();
+  const lv = level(stats().xp), pill = $('#lvl-pill'); if (pill) pill.innerHTML = `<b>Stig ${lv.n}</b><span class="pill-bar"><span style="width:${Math.round(lv.into / lv.need * 100)}%"></span></span>`;
+  window.scrollTo(0, y);
+}
+
+/* ---------- modal ---------- */
+function openModal(m) { S.modal = m; S.confirm = null; $('#modal').hidden = false; renderModal(); const f = $('.sheet [autofocus]'); if (f) f.focus(); }
+function closeModal() { if (S.modal?.kind === 'timer') clearInterval(timerInt); S.modal = null; $('#modal').hidden = true; render(); }
+function refreshModalIfSafe(any) {
+  if (!S.modal || !(any || S.modal.kind === 'item')) return;
+  const a = document.activeElement; if (a && $('.sheet').contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) return;
+  if (S.modal.kind === 'item' && !getItem(S.modal.id)) return closeModal();
+  renderModal();
+}
+function renderModal() {
+  const m = S.modal, sh = $('.sheet'); if (!m) return;
+  const top = sh.scrollTop;
+  sh.innerHTML = ({ item: mItem, step: mStep, sched: mSched, slot: mSlot, new: mNew, timer: mTimer, settings: mSettings }[m.kind])();
+  sh.scrollTop = top;
+}
+const remSelect = s => `<label class="f">Áminning<select id="sc-rem">${REM.map(([v, l]) => `<option value="${v}" ${String(s.slot ? (s.remind ?? '') : 5) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
+const closeBtn = `<button class="icon-btn" data-a="close" aria-label="Loka">${ICON.x}</button>`;
+const minSelect = (v, attrs) => `<select ${attrs}>${MINS.map(x => `<option value="${x}" ${+v === x ? 'selected' : ''}>${fmtDur(x)}</option>`).join('')}</select>`;
+
+function mItem() {
+  const it = getItem(S.modal.id); if (!it) return '';
+  const others = S.items.filter(o => o.id !== it.id && !o.archived && !isEvent(o) && !o.parentId && !it.dependsOn.includes(o.id) && !itemReaches(o.id, it.id));
+  const parent = getItem(it.parentId), sub = !!parent;
+  const blocks = S.items.filter(o => o.dependsOn?.includes(it.id));
+  const ph = phases(it);
+  const fields = it.type === 'admin' ? `<div class="sec"><label class="f">Til hvers<input type="text" id="f-to" data-f="to" value="${esc(it.to)}" placeholder="Hver á að fá þetta?"></label>
+      <label class="f">Efni<input type="text" id="f-subject" data-f="subject" value="${esc(it.subject)}"></label>
+      <label class="f">Meira<textarea id="f-more" data-f="more" placeholder="Punktar, það sem þarf að koma fram">${esc(it.more)}</textarea></label></div>`
+    : isEvent(it) ? `<div class="sec"><div class="fgrid"><label class="f">Dagur<input type="date" id="f-date" data-f="date" value="${esc(it.date)}"></label>
+      <label class="f">Byrjar<input type="time" id="f-start" data-f="start" value="${esc(it.start)}"></label><label class="f">Endar<input type="time" id="f-end" data-f="end" value="${esc(it.end)}"></label></div>
+      <div class="fgrid"><label class="f">Endurtekning<select id="f-repeat" data-ch="repeat">${REPEATS.map(([k, l]) => `<option value="${k}" ${(it.repeat?.freq || 'none') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        <label class="f">Áminning<select id="f-remind" data-ch="remind">${REM.map(([v, l]) => `<option value="${v}" ${String(it.remind ?? '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        ${it.repeat?.freq && it.repeat.freq !== 'none' ? `<label class="f">Til og með (má sleppa)<input type="date" id="f-until" data-ch="until" value="${esc(it.repeat.until || '')}"></label>` : ''}</div>
+      ${['weekly', 'biweekly'].includes(it.repeat?.freq) ? `<div class="row"><span class="sub">Dagar:</span>${[1, 2, 3, 4, 5, 6, 0].map(i => `<button class="chip" data-a="rep-day" data-v="${i}" aria-pressed="${repDays(it).includes(i)}">${DS[i]}</button>`).join('')}</div>` : ''}
+      ${S.modal.occ && it.repeat?.freq && it.repeat.freq !== 'none' ? `<div class="row"><button class="btn sm" data-a="skip-occ" data-v="${S.modal.occ}">Sleppa þessu skipti (${fmtShort(S.modal.occ)})</button></div>` : ''}
+      ${(it.except || []).length ? `<p class="sub">Sleppt: ${it.except.slice().sort().map(d => `${fmtShort(d)} <button class="linkbtn" data-a="unskip-occ" data-v="${d}">afturkalla</button>`).join(', ')}</p>` : ''}
+      <label class="f">Athugasemdir<textarea id="f-notes" data-f="notes">${esc(it.notes)}</textarea></label></div>`
+    : sub ? '' : `<div class="sec"><label class="f">Af hverju skiptir þetta mig máli?<textarea id="f-why" data-f="why" placeholder="Til dæmis: mig langar að líða vel í eldhúsinu">${esc(it.why)}</textarea></label></div>`;
+  const rewardField = isEvent(it) ? '' : `<label class="f reward-f"><span>${ICON.gift} Verðlaun þegar ${sub ? 'þetta undirverkefni' : 'þetta'} klárast</span><input type="text" id="f-reward" data-f="reward" value="${esc(it.reward)}" placeholder="${sub ? 'Til dæmis: góður kaffibolli' : 'Til dæmis: út að borða'}"></label>`;
+  const delLabel = S.confirm === 'del-item' ? (descendants(it).length > 1 ? 'Smelltu aftur. Undirverkefnin eyðast líka' : 'Smelltu aftur til að eyða') : 'Eyða';
+  return `<div class="sheet-head"><div style="flex:1;min-width:0;display:grid;gap:4px">${sub ? `<button class="btn sm ghost" style="justify-self:start;padding-left:0" data-a="open" data-i="${parent.id}">‹ ${esc(crumb(parent))}</button>` : ''}<span class="badge t-${it.type}">${sub ? 'Undirverkefni' : TYPES[it.type].label}</span>
+      <input type="text" class="title-inp" id="f-title" data-f="title" value="${esc(it.title)}" aria-label="Heiti"></div>${closeBtn}</div>
+    ${fields}${rewardField}
+    <div class="sec"><h3>${isEvent(it) ? 'Undirbúningur' : 'Skref'}</h3>
+      ${it.steps.length ? (ph.length > 1 || ph[0]?.length > 1 ? `<p class="sub">Skref í sama dálki má vinna samhliða. Dálkur opnast þegar skrefin sem þarf á undan eru kláruð.</p>` : '') + `<div class="phases">${ph.map((p, i) => `<div class="phase"><div class="phase-h">${i === 0 ? 'Hægt að byrja strax' : `Svo · áfangi ${i + 1}`}${p.length > 1 ? ' · samhliða' : ''}${ph.length > 1 && p.every(sd) ? ' <span class="phase-ok">· í höfn</span>' : ''}</div>${p.map(s => stepRow(it, s)).join('')}</div>`).join('')}</div>`
+        : `<p class="empty-line">Engin skref ennþá.</p>`}
+      ${!isEvent(it) ? aiPanel(S.modal.ai, 'item') : ''}
+      <div class="addrow"><input type="text" id="ns-title" placeholder="Nýtt skref, t.d. kaupa sandpappír" aria-label="Nýtt skref">${minSelect(15, 'id="ns-min" aria-label="Tími"')}<button class="btn sm" data-a="add-step">Bæta við</button>${!isEvent(it) ? `<button class="btn sm ghost" data-a="add-sub" title="Skref sem skiptist sjálft í fleiri skref">+ Sem undirverkefni</button>` : ''}</div>
+    </div>
+    ${!isEvent(it) && !sub ? `<div class="sec"><h3>Tengingar</h3>
+      <p class="sub">Verkefni sem þurfa að klárast áður en þetta getur hafist.</p>
+      <div class="row">${it.dependsOn.map(getItem).filter(Boolean).map(o => `<span class="chip" aria-pressed="true">${esc(o.title)} <button class="icon-btn" style="width:22px;height:22px" data-a="rm-dep" data-dep="${o.id}" aria-label="Fjarlægja tengingu">${ICON.x}</button></span>`).join('')}
+        ${others.length ? `<select id="add-dep" data-ch="add-dep" style="width:auto" aria-label="Bæta við tengingu"><option value="">+ Tengja við verkefni…</option>${others.map(o => `<option value="${o.id}">${esc(o.title)}</option>`).join('')}</select>` : ''}</div>
+      ${blocks.length ? `<p class="sub">Þetta heldur aftur af: ${blocks.map(o => `<b>${esc(o.title)}</b>`).join(', ')}</p>` : ''}</div>` : ''}
+    <div class="foot"><button class="btn danger" data-a="del-item">${delLabel}</button>
+      <div class="row"><button class="btn" data-a="ics-item" title="Senda í dagatal símans">${ICON.cal} Í dagatal símans</button>${!isEvent(it) && !sub ? `<button class="btn" data-a="archive">${it.archived ? 'Taka úr geymslu' : 'Klárað, setja í geymslu'}</button>` : ''}<button class="btn primary" data-a="close">Loka</button></div></div>`;
+}
+function mStep() {
+  const it = getItem(S.modal.id), s = getStep(it, S.modal.sid); if (!s) return '';
+  const others = it.steps.filter(o => o.id !== s.id), child = getItem(s.subId);
+  const delLabel = S.confirm === 'del-step' ? 'Smelltu aftur til að eyða' : 'Eyða skrefi';
+  const depsHtml = others.length ? `<div class="sec"><h3>Þarf að gerast á undan</h3><div class="row">${others.map(o => { const on = s.dependsOn.includes(o.id); const cyc = !on && reaches(it, o.id, s.id);
+      return `<button class="chip" data-a="sdep" data-dep="${o.id}" aria-pressed="${on}" ${cyc ? 'disabled title="Þetta skref bíður nú þegar eftir þessu"' : ''}>${esc(o.title)}</button>`; }).join('')}</div></div>` : '';
+  if (child) return `<div class="sheet-head"><div style="flex:1;min-width:0;display:grid;gap:4px"><button class="btn sm ghost" style="justify-self:start;padding-left:0" data-a="open" data-i="${it.id}">‹ ${esc(crumb(it))}</button>
+      <input type="text" class="title-inp" id="sf-title" data-sf="title" value="${esc(s.title)}" aria-label="Heiti skrefs"></div>${closeBtn}</div>
+    <p class="sub">Þetta skref er undirverkefni. Það klárast sjálfkrafa þegar öll skrefin í því eru kláruð, og skrefin sem bíða eftir því opnast þá.</p>
+    ${depsHtml}
+    <div class="foot"><span></span><div class="row"><button class="btn" data-a="open" data-i="${child.id}">Opna undirverkefnið ›</button><button class="btn primary" data-a="open" data-i="${it.id}">Búið</button></div></div>`;
+  return `<div class="sheet-head"><div style="flex:1;min-width:0;display:grid;gap:4px"><button class="btn sm ghost" style="justify-self:start;padding-left:0" data-a="open" data-i="${it.id}">‹ ${esc(it.title)}</button>
+      <input type="text" class="title-inp" id="sf-title" data-sf="title" value="${esc(s.title)}" aria-label="Heiti skrefs"></div>${closeBtn}</div>
+    <div class="row">${chk(it, s, !s.done && !stepReady(it, s))}<span>${s.done ? 'Klárað' : stepReady(it, s) ? 'Tilbúið að vinna' : 'Bíður eftir öðru skrefi'}</span></div>
+    <div class="fgrid"><label class="f">Áætlaður tími${minSelect(s.minutes, 'id="sf-min" data-sf="minutes"')}</label></div>
+    ${s.minutes >= 90 ? `<p class="warnline">Þetta er stórt skref. Það er auðveldara að byrja ef það er brotið niður.</p>` : ''}
+    <div class="sec"><h3>Orka sem þarf</h3><div class="row">${Object.entries(ENERGY).map(([k, l]) => `<button class="chip" data-a="energy" data-v="${k}" aria-pressed="${s.energy === k}">${l}</button>`).join('')}</div></div>
+    ${depsHtml}
+    <div class="sec"><h3>Tími í dagatali</h3><div class="fgrid"><label class="f">Dagur<input type="date" id="sc-date" value="${esc(s.slot?.date || today())}"></label><label class="f">Klukkan<input type="time" id="sc-time" value="${esc(s.slot?.start || '10:00')}"></label>${remSelect(s)}</div>
+      <div class="row"><button class="btn sm primary" data-a="sched-save">${s.slot ? 'Færa' : 'Setja í dagatal'}</button>${s.slot ? `<button class="btn sm ghost" data-a="sched-clear">Taka úr dagatali</button>` : '<span class="sub">Annars birtist það sem óklárað skref þar til það er unnið.</span>'}</div></div>
+    <div class="sec" id="split-sec"><h3>Brjóta niður</h3><p class="sub">Skrifaðu minni skref, eitt í hverja línu. Svo velur þú hvernig:</p>
+      ${P.sample ? `<div class="ai">${S.modal.aiSplit === 'loading' ? `<span class="ai-think">${ICON.spark} Claude er að hugsa…</span><button class="btn sm ghost" data-a="ai-stop">Hætta við</button>`
+        : `<button class="btn sm ai-btn" data-a="ai-split">${ICON.spark} Fá tillögu frá Claude</button>${S.modal.aiSplit ? `<span class="err">${esc(S.modal.aiSplit)}</span>` : ''}`}</div>` : ''}
+      <textarea id="split-text" placeholder="Taka frontana af&#10;Þvo þá&#10;Slípa fyrstu fjóra">${esc(S.modal.splitText || '')}</textarea>
+      <div class="split-opts"><button class="btn sm" data-a="split-do"><span><b>Í röð hér</b><small>Skrefin koma í stað þessa og eru gerð hvert á eftir öðru</small></span></button>
+        <button class="btn sm" data-a="split-sub"><span><b>Sem undirverkefni</b><small>Skrefið verður að eigin verkefni sem má brjóta enn frekar niður</small></span></button></div></div>
+    <div class="foot"><button class="btn danger" data-a="del-step">${delLabel}</button><div class="row"><button class="btn go" data-a="timer" data-i="${it.id}" data-s="${s.id}">${ICON.play} Byrja í 5 mínútur</button><button class="btn primary" data-a="open" data-i="${it.id}">Búið</button></div></div>`;
+}
+function mSched() {
+  const it = getItem(S.modal.id), s = getStep(it, S.modal.sid); if (!s) return '';
+  return `<div class="sheet-head"><div><p class="eyebrow">Setja í dagatal</p><h2>${esc(s.title)}</h2><p class="sub">${esc(it.title)} · ${fmtDur(s.minutes)}</p></div>${closeBtn}</div>
+    <div class="fgrid"><label class="f">Dagur<input type="date" id="sc-date" value="${esc(s.slot?.date || today())}"></label><label class="f">Klukkan<input type="time" id="sc-time" value="${esc(s.slot?.start || '10:00')}" autofocus></label>${remSelect(s)}</div>
+    <div class="foot"><span>${s.slot ? `<button class="btn ghost" data-a="sched-clear">Taka úr dagatali</button>` : ''}</span><button class="btn primary" data-a="sched-save">Vista</button></div>`;
+}
+function mSlot() {
+  const { date, hour } = S.modal;
+  const list = []; for (const it of active()) for (const s of it.steps) if (!s.done && !s.slot && !getItem(s.subId)) list.push({ it, s, r: stepReady(it, s) });
+  list.sort((a, b) => b.r - a.r);
+  return `<div class="sheet-head"><div><p class="eyebrow">${fmtLong(date)} · kl. ${pad(hour)}:00</p><h2>Hvað á að gerast hér?</h2></div>${closeBtn}</div>
+    <div class="sec"><h3>Setja skref á þennan tíma</h3>${list.length ? `<div class="placelist">${list.map(({ it, s, r }) => `<button data-a="place" data-i="${it.id}" data-s="${s.id}"><b>${esc(s.title)}</b><small>${esc(it.title)} · ${fmtDur(s.minutes)}${r ? '' : ' · bíður eftir öðru skrefi'}</small></button>`).join('')}</div>` : `<p class="empty-line">Engin óröðuð skref.</p>`}</div>
+    <div class="row"><button class="btn" data-a="new" data-type="fundur" data-date="${date}" data-time="${pad(hour)}:00">+ Nýr fundur hér</button><button class="btn" data-a="new" data-type="dagskra" data-date="${date}" data-time="${pad(hour)}:00">+ Ný dagskrá hér</button></div>`;
+}
+
+/* wizard */
+function adminSteps() {
+  const a = newStep({ title: 'Finna netfang eða símanúmer', minutes: 10, energy: 'low' });
+  const b = newStep({ title: 'Skrifa drög, punktar duga', minutes: 20, energy: 'mid' });
+  const c = newStep({ title: 'Senda eða hringja', minutes: 10, energy: 'mid', dependsOn: [a.id, b.id] });
+  const d = newStep({ title: 'Fylgja eftir ef ekkert svar hefur borist', minutes: 5, energy: 'low', dependsOn: [c.id] });
+  return [a, b, c, d];
+}
+function mNew() {
+  const w = S.modal.w;
+  const flow = { verkefni: ['nafn', 'skref', 'roð'], admin: ['admin', 'skref'], fundur: ['vidb'], dagskra: ['vidb'] }[w.type] || [];
+  const screen = w.type ? flow[w.i] : 'type';
+  const dots = w.type && flow.length > 1 ? `<div class="dots">${flow.map((_, i) => `<i class="${i <= w.i ? 'on' : ''}"></i>`).join('')}</div>` : '';
+  const last = w.type && w.i === flow.length - 1;
+  const foot = w.type ? `<div class="foot"><button class="btn ghost" data-a="w-back">‹ Til baka</button><div class="row">${w.err ? `<span class="err">${esc(w.err)}</span>` : ''}
+      ${last ? `<button class="btn primary" data-a="w-save">Vista</button>` : `<button class="btn primary" data-a="w-next">Áfram ›</button>`}</div></div>` : '';
+  let body = '';
+  if (screen === 'type') body = `<div class="sheet-head"><div><p class="eyebrow">Nýtt</p><h2>Hvað viltu setja inn?</h2></div>${closeBtn}</div>
+    <div class="typepick">${Object.entries(TYPES).map(([k, v]) => `<button class="t-${k}" data-a="w-type" data-v="${k}"><span class="badge">${v.label}</span><b>${v.label}</b><span>${v.desc}</span></button>`).join('')}</div>`;
+  if (screen === 'nafn') body = `<div class="sheet-head"><div><p class="eyebrow">Nýtt verkefni</p><h2>Hvað heitir verkefnið?</h2></div>${closeBtn}</div>${dots}
+    <label class="f">Heiti<input type="text" data-w="title" id="w-title" value="${esc(w.title)}" placeholder="Taka eldhúsið í gegn" autofocus></label>
+    <label class="f">Af hverju skiptir þetta þig máli? (má sleppa)<textarea data-w="why" id="w-why" placeholder="Það hjálpar að muna af hverju, þegar erfitt er að byrja.">${esc(w.why)}</textarea></label>
+    <label class="f reward-f"><span>${ICON.gift} Hvernig ætlar þú að verðlauna þig þegar þetta klárast? (má sleppa)</span><input type="text" data-w="reward" id="w-reward" value="${esc(w.reward)}" placeholder="Til dæmis: út að borða"></label>`;
+  if (screen === 'admin') body = `<div class="sheet-head"><div><p class="eyebrow">Nýtt admin</p><h2>Hvað þarf að gera?</h2></div>${closeBtn}</div>${dots}
+    <label class="f">Heiti<input type="text" data-w="title" id="w-title" value="${esc(w.title)}" placeholder="Hafa samband við kennarana" autofocus></label>
+    <div class="fgrid"><label class="f">Til hvers<input type="text" data-w="to" id="w-to" value="${esc(w.to)}" placeholder="Kennarar, stofnun, fyrirtæki"></label>
+    <label class="f">Efni<input type="text" data-w="subject" id="w-subject" value="${esc(w.subject)}" placeholder="Fá fund vegna…"></label></div>
+    <label class="f">Meira<textarea data-w="more" id="w-more" placeholder="Það sem þarf að koma fram">${esc(w.more)}</textarea></label>
+    <label class="f reward-f"><span>${ICON.gift} Verðlaun þegar þetta er afgreitt (má sleppa)</span><input type="text" data-w="reward" id="w-reward" value="${esc(w.reward)}" placeholder="Til dæmis: göngutúr í góðu veðri"></label>`;
+  if (screen === 'vidb') body = `<div class="sheet-head"><div><p class="eyebrow">${TYPES[w.type].label}</p><h2>${w.type === 'fundur' ? 'Nýr fundur' : 'Ný dagskrá'}</h2></div>${closeBtn}</div>
+    <label class="f">Heiti<input type="text" data-w="title" id="w-title" value="${esc(w.title)}" placeholder="${w.type === 'fundur' ? 'Fundur með kennurum' : 'Sækja í fótbolta'}" autofocus></label>
+    <div class="fgrid"><label class="f">Dagur<input type="date" data-w="date" id="w-date" value="${esc(w.date)}"></label><label class="f">Byrjar<input type="time" data-w="start" id="w-start" value="${esc(w.start)}"></label><label class="f">Endar<input type="time" data-w="end" id="w-end" value="${esc(w.end)}"></label></div>
+    <div class="fgrid"><label class="f">Endurtekning<select data-w="freq" id="w-freq">${REPEATS.map(([k, l]) => `<option value="${k}" ${w.freq === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label class="f">Áminning<select data-w="remind" id="w-remind">${REM.map(([v, l]) => `<option value="${v}" ${String(w.remind) === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
+    <label class="f">Athugasemdir<textarea data-w="notes" id="w-notes">${esc(w.notes)}</textarea></label>
+    <div class="sec"><h3>Undirbúningur (má sleppa)</h3><p class="sub">Til dæmis: prenta út, taka saman spurningar.</p>${stepsEditor(w)}</div>`;
+  if (screen === 'skref') {
+    const total = w.steps.reduce((a, s) => a + (s.title.trim() ? +s.minutes : 0), 0);
+    body = `<div class="sheet-head"><div><p class="eyebrow">${esc(w.title)}</p><h2>Hvaða skref eru í ${w.type === 'admin' ? 'þessu' : 'þessu verkefni'}?</h2></div>${closeBtn}</div>${dots}
+      <div class="coach"><b>Til að klára þetta þarf ég að gera þessi skref:</b><span>Byrjaðu hvert skref á sögn: kaupa, hringja, slípa, senda. Fyrsta skrefið má vera næstum hlægilega lítið.</span></div>
+      ${aiPanel(w.ai, 'wizard')}${stepsEditor(w)}${total ? `<p class="sub">Samtals u.þ.b. ${fmtDur(total)}</p>` : ''}`;
+  }
+  if (screen === 'roð') {
+    const st = w.steps.filter(s => s.title.trim());
+    const tmp = { steps: st };
+    body = `<div class="sheet-head"><div><p class="eyebrow">${esc(w.title)}</p><h2>Hvað þarf að gerast á undan hverju?</h2></div>${closeBtn}</div>${dots}
+      <p class="sub">Merktu bara það sem raunverulega þarf að bíða. Allt annað má gera samhliða, í hvaða röð sem er.</p>
+      <div class="sec">${st.map(s => { const others = st.filter(o => o.id !== s.id); return `<div class="phase"><b>${esc(s.title)}</b><div class="row"><span class="sub">þarf fyrst:</span>${others.map(o => { const on = s.dependsOn.includes(o.id), cyc = !on && reaches(tmp, o.id, s.id);
+        return `<button class="chip" data-a="w-dep" data-s="${s.id}" data-dep="${o.id}" aria-pressed="${on}" ${cyc ? 'disabled' : ''}>${esc(o.title)}</button>`; }).join('')}</div></div>`; }).join('')}</div>
+      <div class="sec"><h3>Svona lítur þetta út</h3><div class="phases">${phases(tmp).map((p, i) => `<div class="phase"><div class="phase-h">${i === 0 ? 'Hægt að byrja strax' : `Áfangi ${i + 1}`}${p.length > 1 ? ' · samhliða' : ''}</div>${p.map(s => `<div style="padding:2px 6px">${esc(s.title)} <span class="sub">${fmtDur(s.minutes)}</span></div>`).join('')}</div>`).join('')}</div></div>`;
+  }
+  return body + foot;
+}
+function stepsEditor(w) {
+  return `<div class="wsteps">${w.steps.map((s, i) => `<div class="wstep"><span class="n">${i + 1}</span>
+      <input type="text" id="ws-${s.id}" data-ws="title" data-idx="${i}" value="${esc(s.title)}" placeholder="${i === 0 ? 'Fá lánaða málningarsprautu' : 'Næsta skref'}" aria-label="Skref ${i + 1}">
+      ${minSelect(s.minutes, `data-ws="minutes" data-idx="${i}" aria-label="Tími skrefs ${i + 1}"`)}
+      <button class="icon-btn" data-a="w-rm" data-idx="${i}" aria-label="Fjarlægja skref ${i + 1}">${ICON.x}</button>
+      ${+s.minutes >= 120 ? `<span></span><span class="warnline" style="grid-column:2/-1">Stórt skref. Má brjóta það niður í tvö eða fleiri?</span>` : ''}</div>`).join('')}</div>
+    <div class="row"><button class="btn sm" data-a="w-add">+ Bæta við skrefi</button></div>`;
+}
+
+/* timer */
+let timerInt;
+function mTimer() {
+  const m = S.modal, it = getItem(m.id), s = getStep(it, m.sid);
+  return `<div class="sheet-head"><div><p class="eyebrow">Bara byrja</p><h2>${esc(s?.title || '')}</h2><p class="sub">${esc(it?.title || '')}</p></div>${closeBtn}</div>
+    <div class="timer"><div class="ring" id="t-ring"><div><div class="clock" id="t-clock">5:00</div></div></div>
+      <p id="t-msg" class="sub">+3 stig fyrir að byrja. Þú þarft bara að vinna í fimm mínútur. Ef það gengur máttu halda áfram.</p>
+      <div class="row" style="justify-content:center"><button class="btn" data-a="t-more">+5 mínútur</button><button class="btn primary" data-a="t-done">${ICON.check} Skrefið er klárað</button><button class="btn ghost" data-a="close">Hætta í bili</button></div></div>`;
+}
+function tick() {
+  const m = S.modal; if (!m || m.kind !== 'timer') return clearInterval(timerInt);
+  const left = Math.max(0, m.end - Date.now()), sec = Math.ceil(left / 1000);
+  const c = $('#t-clock'), r = $('#t-ring'), msg = $('#t-msg'); if (!c) return;
+  c.textContent = `${Math.floor(sec / 60)}:${pad(sec % 60)}`;
+  r.style.setProperty('--p', 1 - left / m.total);
+  if (left <= 0 && !m.over) { m.over = true; msg.textContent = 'Tíminn er búinn og þú byrjaðir. Það er það sem skiptir máli. Halda áfram eða hætta?'; }
+}
+function startTimer(id, sid) { S.game.timerStarts = (S.game.timerStarts || 0) + 1; S.game.timerDays = { ...(S.game.timerDays || {}), [today()]: 1 }; store.saveGame();
+  const fresh = newBadges(stats()); if (fresh.length) setTimeout(() => toast(`Nýtt merki: ${fresh[0].t}`), 600);
+  openModal({ kind: 'timer', id, sid, total: 5 * 60000, end: Date.now() + 5 * 60000 }); clearInterval(timerInt); timerInt = setInterval(tick, 250); tick(); }
+
+/* ---------- platform: what this copy of the app can do ---------- */
+const P = { sample: null, downloads: null, inClaude: !!window.claude, installEvt: null };
+async function initPlatform() {
+  if (!window.claude?.use) return;
+  try { const [sm, dl] = await Promise.all([window.claude.use('sample'), window.claude.use('downloads')]); P.sample = sm; P.downloads = dl; } catch {}
+  render(); if (S.modal && ['new', 'item', 'step', 'settings'].includes(S.modal.kind)) refreshModalIfSafe(true);
+}
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); P.installEvt = e; });
+async function saveFile(filename, text, mime) {
+  if (P.downloads) {
+    try { await P.downloads.save({ filename, data: new Blob([text], { type: mime }) }); toast('Skráin er vistuð.'); }
+    catch (e) { if (e?.code !== 'declined') toast('Ekki tókst að vista skrána hér. Prófaðu sjálfstæðu útgáfuna af Skref.'); }
+    return;
+  }
+  if (P.inClaude) { toast('Ekki er hægt að vista skrár í þessari sýn.'); return; }
+  const file = new File([text], filename, { type: mime });
+  try { if (navigator.canShare?.({ files: [file] }) && /iPhone|iPad|Android/i.test(navigator.userAgent)) { await navigator.share({ files: [file], title: filename }); return; } } catch (e) { if (e?.name === 'AbortError') return; }
+  const url = URL.createObjectURL(file), a = document.createElement('a'); a.href = url; a.download = filename; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+/* ---------- calendar file (.ics) so the phone's own calendar can remind ---------- */
+const icsDate = (d, t) => d.replace(/-/g, '') + (t ? 'T' + t.replace(':', '') + '00' : '');
+const icsEsc = x => String(x || '').replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+function rruleOf(it) {
+  const r = it.repeat, BY = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA']; if (!r || r.freq === 'none' || !r.freq) return '';
+  let x = { daily: 'FREQ=DAILY', weekdays: 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR', weekly: 'FREQ=WEEKLY;BYDAY=' + repDays(it).map(i => BY[i]).join(','),
+    biweekly: 'FREQ=WEEKLY;INTERVAL=2;BYDAY=' + repDays(it).map(i => BY[i]).join(','), monthly: 'FREQ=MONTHLY;BYMONTHDAY=' + fromISO(it.date).getDate() }[r.freq] || '';
+  if (x && r.until) x += ';UNTIL=' + icsDate(r.until) + 'T235959'; return x;
+}
+function icsEvent(o, stamp) {
+  const L = ['BEGIN:VEVENT', `UID:${o.uid}@skref.app`, `DTSTAMP:${stamp}`, `SUMMARY:${icsEsc(o.title)}`];
+  if (o.start) L.push(`DTSTART:${icsDate(o.date, o.start)}`, `DTEND:${icsDate(o.date, o.end && o.end > o.start ? o.end : fromMin(Math.min(toMin(o.start) + 60, 1439)))}`);
+  else L.push(`DTSTART;VALUE=DATE:${icsDate(o.date)}`, `DTEND;VALUE=DATE:${icsDate(addDays(o.date, 1))}`);
+  if (o.desc) L.push(`DESCRIPTION:${icsEsc(o.desc)}`);
+  if (o.rrule) { L.push(`RRULE:${o.rrule}`); for (const x of o.except || []) L.push(o.start ? `EXDATE:${icsDate(x, o.start)}` : `EXDATE;VALUE=DATE:${icsDate(x)}`); }
+  if (o.remind != null) L.push('BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsEsc(o.title)}`, `TRIGGER:-PT${o.remind}M`, 'END:VALARM');
+  L.push('END:VEVENT'); return L;
+}
+function buildICS(items) {
+  const t = today(), n = new Date(), stamp = `${n.getUTCFullYear()}${pad(n.getUTCMonth() + 1)}${pad(n.getUTCDate())}T${pad(n.getUTCHours())}${pad(n.getUTCMinutes())}00Z`;
+  const L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Skref//IS', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Skref']; let count = 0;
+  for (const it of items) {
+    const rr = isEvent(it) ? rruleOf(it) : '';
+    if (isEvent(it) && it.date && (rr || it.date >= t)) { L.push(...icsEvent({ uid: it.id, title: it.title, desc: it.notes, date: it.date, start: it.start, end: it.end, remind: it.remind, rrule: rr, except: it.except }, stamp)); count++; }
+    for (const s of it.steps) if (!s.done && s.slot && s.slot.date >= t) { L.push(...icsEvent({ uid: s.id, title: s.title, desc: `Skref í: ${crumb(it)}. Byrjaðu bara í 5 mínútur.`, date: s.slot.date, start: s.slot.start,
+      end: fromMin(Math.min(toMin(s.slot.start) + (+s.minutes || 15), 1439)), remind: s.remind }, stamp)); count++; }
+  }
+  L.push('END:VCALENDAR'); return { text: L.join('\r\n') + '\r\n', count };
+}
+function exportICS(items, name) {
+  const { text, count } = buildICS(items);
+  if (!count) { toast('Ekkert á dagskrá fram undan til að senda í dagatalið.'); return; }
+  saveFile(name, text, 'text/calendar');
+}
+
+/* ---------- reminders while the app is open ---------- */
+let fired = new Set(); try { fired = new Set(JSON.parse(localStorage.getItem('skref-fired') || '[]')); } catch {}
+S.snoozed = [];
+function upcomingReminders() {
+  const out = [], t = today(), tm = addDays(t, 1), at = (d, hm, before) => fromISO(d).getTime() + (toMin(hm) - before) * 60000;
+  for (const it of active()) {
+    if (isEvent(it) && it.remind != null && it.start) for (const d of [t, tm]) if (occursOn(it, d))
+      out.push({ key: `e|${it.id}|${d}|${it.start}|${it.remind}`, at: at(d, it.start, it.remind), title: it.title,
+        body: `${it.remind >= 1440 ? 'Á morgun' : it.remind ? `Eftir ${fmtDur(it.remind)}` : 'Núna'}, kl. ${it.start}`, kind: 'ev', i: it.id, d });
+    for (const s of it.steps) if (!s.done && s.slot && s.remind != null && (s.slot.date === t || s.slot.date === tm))
+      out.push({ key: `s|${s.id}|${s.slot.date}|${s.slot.start}|${s.remind}`, at: at(s.slot.date, s.slot.start, s.remind), title: s.title,
+        body: `${crumb(it)}, kl. ${s.slot.start}. Byrjaðu bara í 5 mínútur.`, kind: 'st', i: it.id, s: s.id });
+  }
+  const g = S.game;
+  if (g.morning) out.push({ key: `m|${t}|${g.morning}`, at: at(t, g.morning, 0), title: 'Góðan daginn', get body() { const n = pickNext(); return n ? `Næsta skref: ${n.s.title}` : 'Kíktu á daginn þinn.'; }, kind: 'morning' });
+  if (g.evening) out.push({ key: `k|${t}|${g.evening}`, at: at(t, g.evening, 0), title: 'Hvernig gekk í dag?', body: 'Skrifaðu nokkrar línur í dagbókina og sjáðu hvað tókst.', kind: 'evening' });
+  return out.concat(S.snoozed);
+}
+function checkReminders() {
+  if (!S.loaded) return;
+  const now = Date.now();
+  const due = upcomingReminders().filter(r => r.at <= now && now - r.at < 20 * 60000 && !fired.has(r.key));
+  if (!due.length) return;
+  for (const r of due) { fired.add(r.key); S.snoozed = S.snoozed.filter(x => x.key !== r.key); showReminder(r); }
+  try { localStorage.setItem('skref-fired', JSON.stringify([...fired].slice(-300))); } catch {}
+}
+let audioCtx = null;
+document.addEventListener('pointerdown', () => { try { audioCtx ||= new (window.AudioContext || window.webkitAudioContext)(); } catch {} }, { once: true });
+function chime() { try { if (!audioCtx) return; const t = audioCtx.currentTime; [660, 880].forEach((f, i) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.frequency.value = f; o.connect(g); g.connect(audioCtx.destination);
+  g.gain.setValueAtTime(0, t + i * .18); g.gain.linearRampToValueAtTime(.12, t + i * .18 + .02); g.gain.exponentialRampToValueAtTime(.001, t + i * .18 + .5); o.start(t + i * .18); o.stop(t + i * .18 + .55); }); } catch {} }
+function showReminder(r) {
+  const box = $('#reminders'), el = document.createElement('div'); el.className = 'rem'; el.dataset.key = r.key;
+  const act = r.kind === 'st' ? `<button class="btn sm go" data-a="timer" data-i="${r.i}" data-s="${r.s}">${ICON.play} Byrja í 5 mín</button><button class="btn sm" data-a="snooze">Eftir 10 mín</button>`
+    : r.kind === 'ev' ? `<button class="btn sm" data-a="open" data-i="${r.i}" data-d="${r.d}">Opna</button><button class="btn sm" data-a="snooze">Eftir 10 mín</button>`
+    : r.kind === 'evening' ? `<button class="btn sm go" data-a="nav" data-v="dagbok">Skrifa</button>` : `<button class="btn sm go" data-a="nav" data-v="idag">Sjá daginn</button>`;
+  el.innerHTML = `<div class="rem-ic">${ICON.bell}</div><div class="rem-b"><b>${esc(r.title)}</b><span>${esc(r.body)}</span><div class="row">${act}</div></div><button class="icon-btn" data-a="rem-x" aria-label="Loka áminningu">${ICON.x}</button>`;
+  el._r = r; box.append(el); chime();
+  if (!P.inClaude && 'Notification' in window && Notification.permission === 'granted') {
+    const opt = { body: r.body, tag: r.key, icon: 'icon-192.png', badge: 'icon-192.png' };
+    (navigator.serviceWorker?.ready || Promise.reject()).then(reg => reg.showNotification(r.title, opt)).catch(() => { try { new Notification(r.title, opt); } catch {} });
+  }
+}
+setInterval(checkReminders, 20000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkReminders(); });
+
+/* ---------- backup ---------- */
+function exportBackup() { saveFile(`skref-afrit-${today()}.json`, JSON.stringify({ app: 'skref', version: 3, exportedAt: new Date().toISOString(), items: S.items, journal: S.journal, game: S.game }, null, 1), 'application/json'); }
+async function importBackup(file) {
+  let d; try { d = JSON.parse(await file.text()); } catch { toast('Þessi skrá er ekki gilt afrit úr Skref.'); return; }
+  if (!d || !Array.isArray(d.items)) { toast('Þessi skrá er ekki gilt afrit úr Skref.'); return; }
+  for (const it of d.items) if (it && it.id) store.saveItem(normalize(JSON.parse(JSON.stringify(it))));
+  for (const [k, v] of Object.entries(d.journal || {})) if (/^\d{4}-\d\d-\d\d$/.test(k) && v && (!S.journal[k] || (v.updatedAt || 0) > (S.journal[k].updatedAt || 0))) store.saveJournal(k, v);
+  const g = d.game || {}, G = S.game;
+  G.timerStarts = Math.max(G.timerStarts || 0, g.timerStarts || 0); G.splits = Math.max(G.splits || 0, g.splits || 0); G.spent = Math.max(G.spent || 0, g.spent || 0);
+  G.timerDays = { ...(g.timerDays || {}), ...(G.timerDays || {}) }; G.seen = [...new Set([...(G.seen || []), ...(g.seen || [])])];
+  const ids = new Set((G.rewards || []).map(r => r.id)); G.rewards = [...(G.rewards || []), ...(g.rewards || []).filter(r => r && !ids.has(r.id))];
+  G.morning ||= g.morning || ''; G.evening ||= g.evening || '';
+  store.saveGame(); render(); renderModal(); toast(`Afritið er komið inn: ${d.items.length} atriði.`);
+}
+
+/* ---------- suggestions from Claude (only inside claude.ai) ---------- */
+const aiErr = c => ({ not_granted: 'Þú leyfðir ekki Claude í þetta sinn. Opnaðu síðuna aftur ef þú vilt prófa aftur.', rate_limited: 'Of margar beiðnir í einu. Reyndu aftur eftir smá stund.',
+  invalid_json: 'Svarið kom ekki á réttu formi. Reyndu aftur.', empty_completion: 'Svarið var tómt. Reyndu aftur.', refused: 'Claude vildi ekki svara þessu. Prófaðu að orða verkefnið öðruvísi.',
+  session_expired: 'Innskráningin rann út. Endurhlaðaðu síðuna.', sampling_disabled: 'Tillögur frá Claude eru ekki virkar á þessum reikningi.' }[c] || 'Ekki tókst að fá tillögur núna. Reyndu aftur.');
+const snapMin = m => MINS.reduce((b, x) => Math.abs(x - (+m || 15)) < Math.abs(b - (+m || 15)) ? x : b, 15);
+let aiCtl = null;
+function aiContext(target) {
+  if (target === 'wizard') { const w = S.modal.w; return { title: w.title, type: w.type, why: w.why, to: w.to, subject: w.subject, more: w.more, existing: w.steps.filter(s => s.title.trim()).map(s => s.title.trim()) }; }
+  const it = getItem(S.modal.id), r = rootOf(it);
+  return { title: crumb(it), type: it.type, why: r.why, to: r.to, subject: r.subject, more: r.more, existing: it.steps.map(s => s.title) };
+}
+function aiPrompt(c) {
+  return `Þú hjálpar manneskju með frestunaráráttu og aðgerðarkvíða að brjóta verkefni niður í lítil, áþreifanleg skref svo auðveldara sé að byrja.
+
+Verkefni: ${c.title}
+Tegund: ${c.type === 'admin' ? 'Admin (samskipti, eyðublöð, umsóknir)' : 'Verkefni'}
+${c.why ? `Af hverju það skiptir máli: ${c.why}\n` : ''}${c.to ? `Til hvers: ${c.to}\n` : ''}${c.subject ? `Efni: ${c.subject}\n` : ''}${c.more ? `Nánar: ${c.more}\n` : ''}${c.existing.length ? `Skref sem eru þegar komin (ekki endurtaka þau):\n${c.existing.map(x => '- ' + x).join('\n')}\n` : ''}
+Stingdu upp á 4 til 8 skrefum sem vantar. Reglur:
+- Skrifaðu á íslensku. Hvert skref byrjar á sögn, til dæmis „Hringja í…“ eða „Kaupa…“, og er í mesta lagi átta orð.
+- Fyrsta skrefið á að vera mjög lítið og auðvelt, undir 10 mínútum.
+- "minutes" er ein af tölunum 5, 10, 15, 20, 30, 45, 60, 90, 120.
+- "energy" er "low", "mid" eða "high".
+- "after" er listi af vísum (byrja á 0) í ÞÍNUM lista yfir skref sem verða að klárast á undan. Tómur listi ef skrefið má gera strax eða samhliða öðrum.
+- "tip" er ein stutt, hlý hvatningarsetning á íslensku, án upphrópana um kyn.
+
+Svaraðu eingöngu með JSON á þessu formi:
+{"steps":[{"title":"Finna símanúmerið","minutes":5,"energy":"low","after":[]}],"tip":"…"}`;
+}
+async function aiGo(target) {
+  const m = S.modal, host = target === 'wizard' ? m.w : m; if (!P.sample) return;
+  host.ai = { state: 'loading' }; renderModal();
+  aiCtl?.abort(); const ctl = aiCtl = new AbortController();
+  try {
+    const r = await P.sample.json(aiPrompt(aiContext(target)), { signal: ctl.signal });
+    const raw = Array.isArray(r?.steps) ? r.steps : [];
+    const list = raw.filter(x => x && typeof x.title === 'string' && x.title.trim()).slice(0, 10).map((x, i) => ({ title: x.title.trim().slice(0, 120), minutes: snapMin(x.minutes),
+      energy: ['low', 'mid', 'high'].includes(x.energy) ? x.energy : 'mid', after: (Array.isArray(x.after) ? x.after : []).map(Number).filter(n => Number.isInteger(n) && n >= 0 && n < i), on: true }));
+    if (!list.length) throw { code: 'empty_completion' };
+    host.ai = { state: 'done', list, tip: typeof r.tip === 'string' ? r.tip.slice(0, 200) : '' };
+  } catch (e) { host.ai = e?.code === 'cancelled' ? null : { state: 'error', err: aiErr(e?.code) }; }
+  if (S.modal === m) renderModal();
+}
+function aiAdd(target) {
+  const m = S.modal, host = target === 'wizard' ? m.w : m, list = host.ai?.list || [];
+  const ids = list.map(() => uid()), chosen = list.map((x, i) => ({ ...x, id: ids[i] })).filter(x => x.on);
+  const ok = new Set(chosen.map(x => x.id));
+  const steps = chosen.map(x => newStep({ id: x.id, title: x.title, minutes: x.minutes, energy: x.energy, dependsOn: x.after.map(i => ids[i]).filter(id => ok.has(id)) }));
+  if (!steps.length) { toast('Veldu að minnsta kosti eitt skref.'); return; }
+  if (target === 'wizard') { m.w.steps = [...m.w.steps.filter(s => s.title.trim()), ...steps]; }
+  else { const it = getItem(m.id); it.steps.push(...steps); store.saveItem(it); render(); }
+  host.ai = null; renderModal(); toast(`${steps.length} skrefum bætt við. Þú getur breytt þeim að vild.`);
+}
+function aiPanel(ai, target) {
+  if (!P.sample) return '';
+  if (!ai) return `<div class="ai"><button class="btn sm ai-btn" data-a="ai-go" data-v="${target}">${ICON.spark} Stinga upp á skrefum</button><span class="sub">Claude les heitið og lýsinguna og leggur til skref. Þú velur hvað fer inn.</span></div>`;
+  if (ai.state === 'loading') return `<div class="ai"><span class="ai-think">${ICON.spark} Claude er að hugsa…</span><button class="btn sm ghost" data-a="ai-stop">Hætta við</button></div>`;
+  if (ai.state === 'error') return `<div class="ai"><span class="err">${esc(ai.err)}</span><button class="btn sm" data-a="ai-go" data-v="${target}">Reyna aftur</button><button class="btn sm ghost" data-a="ai-clear" data-v="${target}">Loka</button></div>`;
+  return `<div class="ai ai-done"><div class="ai-head">${ICON.spark}<b>Tillögur frá Claude</b></div>${ai.tip ? `<p class="sub">${esc(ai.tip)}</p>` : ''}
+    <div class="ai-list">${ai.list.map((x, i) => `<button class="ai-row" data-a="ai-tog" data-v="${target}" data-idx="${i}" aria-pressed="${x.on}"><span class="chk" aria-hidden="true">${ICON.check}</span><span><b>${esc(x.title)}</b><small>${fmtDur(x.minutes)} · ${ENERGY[x.energy]}${x.after.length ? ` · eftir: ${x.after.map(j => esc(ai.list[j].title)).join(', ')}` : ''}</small></span></button>`).join('')}</div>
+    <div class="row"><button class="btn sm primary" data-a="ai-add" data-v="${target}">Bæta við völdum</button><button class="btn sm" data-a="ai-go" data-v="${target}">Nýjar tillögur</button><button class="btn sm ghost" data-a="ai-clear" data-v="${target}">Loka</button></div></div>`;
+}
+async function aiSplit() {
+  const m = S.modal; if (!P.sample || m.kind !== 'step') return;
+  const it = getItem(m.id), s = getStep(it, m.sid); m.splitText = $('#split-text')?.value || m.splitText || ''; m.aiSplit = 'loading'; renderModal();
+  aiCtl?.abort(); const ctl = aiCtl = new AbortController();
+  try {
+    const r = await P.sample.json(`Þú hjálpar manneskju með frestunaráráttu og aðgerðarkvíða. Brjóttu þetta skref niður í 2 til 6 minni, áþreifanleg skref á íslensku. Hvert byrjar á sögn og er í mesta lagi átta orð. Fyrsta skrefið á að vera mjög lítið.
+
+Skref: ${s.title}
+Hluti af: ${crumb(it)}
+Áætlaður tími alls: ${fmtDur(s.minutes)}
+
+Svaraðu eingöngu með JSON: {"steps":["…","…"]}`, { signal: ctl.signal });
+    const lines = (Array.isArray(r?.steps) ? r.steps : []).filter(x => typeof x === 'string' && x.trim()).map(x => x.trim().slice(0, 120)).slice(0, 8);
+    if (!lines.length) throw { code: 'empty_completion' };
+    m.splitText = lines.join('\n'); m.aiSplit = null;
+  } catch (e) { m.aiSplit = e?.code === 'cancelled' ? null : aiErr(e?.code); }
+  if (S.modal === m) renderModal();
+}
+
+/* ---------- settings ---------- */
+function mSettings() {
+  const g = S.game, perm = 'Notification' in window ? Notification.permission : 'unsupported';
+  const standaloneMode = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  return `<div class="sheet-head"><div><p class="eyebrow">Stillingar</p><h2>Áminningar, dagatal og gögn</h2></div>${closeBtn}</div>
+  <div class="sec"><h3>Daglegar áminningar</h3>
+    <div class="fgrid"><label class="f">Morgunáminning með næsta skrefi<input type="time" id="set-morning" data-ch="set-morning" value="${esc(g.morning || '')}"></label>
+      <label class="f">Kvöldáminning um dagbókina<input type="time" id="set-evening" data-ch="set-evening" value="${esc(g.evening || '')}"></label></div>
+    <p class="sub">Tæmdu reitinn til að slökkva. Áminningar fyrir fundi, dagskrá og skref stillir þú þegar þú setur þau á tíma.</p>
+    ${P.inClaude ? `<p class="note-box">Inni í Claude birtast áminningar efst á síðunni meðan Skref er opið. Ef þú vilt líka fá áminningar þegar appið er lokað skaltu senda dagskrána í dagatal símans hér fyrir neðan.</p>`
+      : perm === 'granted' ? `<p class="note-box">Tilkynningar eru leyfðar á þessu tæki. Þær berast meðan Skref er opið eða nýlega opnað. Til að fá áminningar sem berast örugglega skaltu líka senda dagskrána í dagatal símans.</p>`
+      : perm === 'unsupported' ? `<p class="note-box">Þessi vafri styður ekki tilkynningar. Notaðu dagatal símans fyrir áminningar.</p>`
+      : `<div class="row"><button class="btn sm primary" data-a="notif">Leyfa tilkynningar á þessu tæki</button>${perm === 'denied' ? '<span class="sub">Tilkynningum var hafnað. Það er hægt að breyta því í stillingum vafrans.</span>' : ''}</div>`}
+  </div>
+  <div class="sec"><h3>Dagatal símans</h3>
+    <p class="sub">Sæktu dagatalsskrá og opnaðu hana í símanum. Þá bætast fundir, endurtekin dagskrá og skref á tíma inn í dagatalið þitt, með áminningum sem virka þótt Skref sé lokað. Ef þú breytir einhverju síðar sækir þú skrána aftur.</p>
+    <div class="row"><button class="btn sm" data-a="ics-all">${ICON.cal} Senda allt í dagatal símans</button></div></div>
+  <div class="sec"><h3>Afrit og flutningur</h3>
+    <p class="sub">${P.inClaude ? 'Gögnin þín vistast á claude.ai-reikningnum þínum.' : 'Gögnin vistast á þessu tæki.'} Með afriti getur þú flutt allt á milli Claude-útgáfunnar og sjálfstæðu útgáfunnar á símanum.</p>
+    <div class="row"><button class="btn sm" data-a="backup">Sækja afrit (.json)</button><label class="btn sm" for="imp-file">Hlaða inn afriti</label><input type="file" id="imp-file" accept=".json,application/json" hidden></div></div>
+  <div class="sec"><h3>Tillögur frá Claude</h3><p class="sub">${P.sample ? 'Virkar. Þú finnur hnappinn „Stinga upp á skrefum“ þegar þú býrð til verkefni og inni í hverju verkefni.' : 'Virkar aðeins þegar Skref er opnað á claude.ai. Í sjálfstæðu útgáfunni er hnappurinn falinn.'}</p></div>
+  ${!P.inClaude && !standaloneMode ? `<div class="sec"><h3>Setja á heimaskjáinn</h3>${P.installEvt ? `<div class="row"><button class="btn sm primary" data-a="install">Setja Skref upp á þessu tæki</button></div>` : ''}
+    <p class="sub">iPhone: opnaðu í Safari, ýttu á Deila og veldu „Bæta á heimaskjá“. Android: opnaðu í Chrome, opnaðu valmyndina og veldu „Setja upp forrit“.</p></div>` : ''}
+  <div class="foot"><span></span><button class="btn primary" data-a="close">Loka</button></div>`;
+}
+
+/* ---------- actions ---------- */
+function toggleDone(id, sid) {
+  const it = getItem(id), s = getStep(it, sid); if (!s || getItem(s.subId)) return;
+  const chain = chainOf(it), b4 = chain.map(c => ({ done: itemDone(c), ph: donePhases(c) })), st0 = stats(), lv0 = level(st0.xp).n;
+  s.done = !s.done; s.doneAt = s.done ? Date.now() : null;
+  store.saveItem(it);
+  if (!s.done) { toast('Merkt óklárað.'); return; }
+  const st1 = stats(), gained = st1.xp - st0.xp, ev = [];
+  chain.forEach((c, i) => {
+    if (isEvent(c)) return;
+    if (!b4[i].done && itemDone(c)) ev.push({ kind: c.parentId ? 'sub' : 'proj', it: c });
+    else if (phases(c).length > 1 && donePhases(c) > b4[i].ph) ev.push({ kind: 'phase', it: c, n: donePhases(c), of: phases(c).length });
+  });
+  const lv1 = level(st1.xp); if (lv1.n > lv0) ev.push({ kind: 'level', lv: lv1 });
+  for (const bd of newBadges(st1)) ev.push({ kind: 'badge', b: bd });
+  if (ev.length) party(ev, gained);
+  else toast(`+${gained} stig. ${['Vel gert.', 'Eitt skref í einu.', 'Flott, þetta er komið.', 'Þetta taldi.'][Math.floor(Math.random() * 4)]}`);
+}
+
+/* ---------- celebration ---------- */
+function party(ev, gained) {
+  const rank = { proj: 0, sub: 1, phase: 2, level: 3, badge: 4 };
+  ev.sort((a, b) => rank[a.kind] - rank[b.kind]);
+  const top = ev[0], lv = level(stats().xp);
+  const head = {
+    proj: e => ['Verkefnið er klárað!', `„${e.it.title}“ er í höfn. Hvert einasta skref taldi.`],
+    sub: e => ['Undirverkefni klárað!', `„${e.it.title}“ er búið. ${getItem(e.it.parentId) ? `Það færir „${getItem(e.it.parentId).title}“ nær markinu.` : ''}`],
+    phase: e => ['Áfangi í höfn!', `Áfangi ${e.n} af ${e.of} í „${e.it.title}“ er búinn. Næstu skref eru opin.`],
+    level: e => [`Nýtt stig: ${e.lv.name}`, `Þetta er stig ${e.lv.n}. Allt sem þú hefur klárað hefur safnast upp.`],
+    badge: e => [`Nýtt merki: ${e.b.t}`, e.b.d + '.'],
+  }[top.kind](top);
+  const rewards = ev.filter(e => (e.kind === 'proj' || e.kind === 'sub') && e.it.reward);
+  const extra = ev.slice(1).map(e => e.kind === 'badge' ? `<span class="pchip">${ICON.medal.replace('width="40" height="40"', 'width="18" height="18"')} ${esc(e.b.t)}</span>`
+    : e.kind === 'level' ? `<span class="pchip">Nýtt stig: ${esc(e.lv.name)}</span>`
+    : e.kind === 'phase' ? `<span class="pchip">Áfangi í höfn: ${esc(e.it.title)}</span>`
+    : `<span class="pchip">${e.kind === 'sub' ? 'Undirverkefni' : 'Verkefni'} klárað: ${esc(e.it.title)}</span>`).join('');
+  const P = $('#party');
+  P.querySelector('.party-card').innerHTML = `<p class="party-xp">+${gained} stig</p><h2>${esc(head[0])}</h2><p>${esc(head[1])}</p>
+    ${rewards.map(e => `<div class="party-reward">${ICON.gift}<div><small>Verðlaunin sem þú lofaðir þér</small><b>${esc(e.it.reward)}</b></div></div>`).join('')}
+    ${extra ? `<div class="row" style="justify-content:center">${extra}</div>` : ''}
+    <div class="lvl"><div class="lvl-top"><span>Stig ${lv.n} · ${esc(lv.name)}</span><span>${lv.into} / ${lv.need}</span></div><div class="bar"><span style="width:${Math.round(lv.into / lv.need * 100)}%"></span></div></div>
+    <button class="btn go" data-a="party-close" autofocus>Áfram!</button>`;
+  P.hidden = false; P.querySelector('[data-a="party-close"]').focus();
+  confetti(top.kind === 'proj' ? 220 : top.kind === 'sub' ? 140 : 90);
+}
+let confRaf;
+function confetti(n) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c = $('#confetti'), x = c.getContext('2d'), W = c.width = innerWidth, H = c.height = innerHeight;
+  const cs = getComputedStyle(document.documentElement), cols = ['--next', '--c-verkefni', '--c-admin', '--c-fundur', '--ok'].map(v => cs.getPropertyValue(v).trim());
+  const ps = [...Array(n)].map(() => ({ x: W / 2 + (Math.random() - .5) * W * .3, y: H * .45, vx: (Math.random() - .5) * 14, vy: -Math.random() * 16 - 4, r: Math.random() * 6.28, vr: (Math.random() - .5) * .3, w: 6 + Math.random() * 6, c: cols[Math.floor(Math.random() * cols.length)] }));
+  const t0 = performance.now(); cancelAnimationFrame(confRaf);
+  const step = t => { x.clearRect(0, 0, W, H); const k = (t - t0) / 2600;
+    for (const p of ps) { p.vy += .42; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += p.vr; x.save(); x.globalAlpha = Math.max(0, 1 - k); x.translate(p.x, p.y); x.rotate(p.r); x.fillStyle = p.c; x.fillRect(-p.w / 2, -p.w / 4, p.w, p.w / 2); x.restore(); }
+    if (k < 1) confRaf = requestAnimationFrame(step); else x.clearRect(0, 0, W, H); };
+  confRaf = requestAnimationFrame(step);
+}
+function seed() {
+  const s = (t, m, e, deps = []) => newStep({ title: t, minutes: m, energy: e, dependsOn: deps });
+  const a = s('Fá lánaða málningarsprautu', 15, 'low'), b = s('Kaupa lakk', 45, 'mid'), c = s('Taka niður borðplötuna', 60, 'high'), d = s('Slípa frontana', 120, 'high');
+  const e = s('Lakka frontana', 180, 'high', [a.id, b.id, d.id]), f = s('Mála panelinn', 120, 'high', [c.id]), g = s('Mála veggina', 180, 'high', [c.id]), h = s('Fara í Sorpu með rusl', 45, 'mid', [c.id]);
+  const k = newItem('verkefni', { title: 'Taka eldhúsið í gegn', steps: [a, b, c, d, e, f, g, h] });
+  const d1 = s('Taka frontana af og merkja þá', 20, 'mid'), d2 = s('Slípa efri skápana', 45, 'high', [d1.id]), d3 = s('Slípa neðri skápana', 45, 'high', [d1.id]), d4 = s('Þurrka rykið af', 15, 'low', [d2.id, d3.id]);
+  const dSub = newItem('verkefni', { title: 'Slípa frontana', parentId: k.id, parentStepId: d.id, steps: [d1, d2, d3, d4] });
+  d.subId = dSub.id; store.saveItem(dSub);
+  const ad = adminSteps(); ad[0].title = 'Finna netfang þjónustuversins';
+  const i = newItem('admin', { title: 'Segja upp gömlu áskriftinni', to: 'Þjónustuver', subject: 'Uppsögn á áskrift', steps: ad, createdAt: Date.now() + 1 });
+  store.saveItem(k); store.saveItem(i); render(); toast('Dæmin eru komin inn.');
+}
+function curStep() { const it = getItem(S.modal.id); return [it, getStep(it, S.modal.sid)]; }
+
+document.addEventListener('click', ev => {
+  const el = ev.target.closest('[data-a]');
+  if (!el) { if (ev.target.id === 'party') { $('#party').hidden = true; return; } if (ev.target.id === 'modal' && S.modal?.kind !== 'timer') closeModal(); return; }
+  const a = el.dataset.a, id = el.dataset.i, sid = el.dataset.s, v = el.dataset.v;
+  if (a !== 'snooze' && a !== 'rem-x' && el.closest('.rem')) el.closest('.rem').remove();
+  if (a !== 'del-item' && a !== 'del-step' && S.confirm) { S.confirm = null; }
+  switch (a) {
+    case 'nav': S.view = v; try { localStorage.setItem('skref-view', v); } catch {} window.scrollTo(0, 0); render(); break;
+    case 'new': { const w = { type: el.dataset.type || null, i: 0, freq: 'none', remind: '15', title: '', why: '', reward: '', to: '', subject: '', more: '', date: el.dataset.date || today(), start: el.dataset.time || '', end: '', notes: '', steps: [], err: '' };
+      if (w.start) w.end = fromMin(Math.min(toMin(w.start) + 60, 1439));
+      if (w.type === 'admin') w.steps = adminSteps(); else if (w.type === 'verkefni') w.steps = [newStep(), newStep(), newStep()];
+      openModal({ kind: 'new', w }); break; }
+    case 'seed': seed(); break;
+    case 'open': openModal({ kind: 'item', id, occ: el.dataset.d || null }); break;
+    case 'rep-day': { const it = getItem(S.modal.id); const dd = repDays(it).slice(), n = +v; const nd = dd.includes(n) ? dd.filter(x => x !== n) : [...dd, n];
+      if (!nd.length) break; it.repeat = { ...it.repeat, days: nd }; store.saveItem(it); renderModal(); render(); break; }
+    case 'skip-occ': { const it = getItem(S.modal.id); it.except = [...new Set([...(it.except || []), v])]; store.saveItem(it); toast(`Sleppt ${fmtShort(v)}.`); closeModal(); break; }
+    case 'unskip-occ': { const it = getItem(S.modal.id); it.except = (it.except || []).filter(x => x !== v); store.saveItem(it); renderModal(); render(); break; }
+    case 'close': closeModal(); break;
+    case 'done': toggleDone(id, sid); render(); if (S.modal && S.modal.kind !== 'timer') renderModal(); break;
+    case 'game': S.view = 'arangur'; try { localStorage.setItem('skref-view', 'arangur'); } catch {} window.scrollTo(0, 0); render(); break;
+    case 'timer': startTimer(id, sid); break;
+    case 't-more': { const m = S.modal, left = Math.max(0, m.end - Date.now()); m.total = left + 5 * 60000; m.end = Date.now() + m.total; m.over = false;
+      const msg = $('#t-msg'); if (msg) msg.textContent = 'Fimm mínútur í viðbót.'; tick(); break; }
+    case 't-done': { const m = S.modal; const s = getStep(getItem(m.id), m.sid); if (s && !s.done) toggleDone(m.id, m.sid); closeModal(); break; }
+    case 'skip': S.skip.add(sid); render(); break;
+    case 'unskip': S.skip.clear(); render(); break;
+    case 'fmin': S.f.min = v ? +v : null; render(); break;
+    case 'fen': S.f.energy = v || null; render(); break;
+    case 'filter': S.filter = v; render(); break;
+    case 'sched': openModal({ kind: 'sched', id, sid }); break;
+    case 'unslot': { const it = getItem(id), s = getStep(it, sid); s.slot = null; store.saveItem(it); render(); break; }
+    case 'edit-step': openModal({ kind: 'step', id, sid }); if (el.dataset.split) setTimeout(() => { $('#split-sec')?.scrollIntoView({ block: 'center' }); $('#split-text')?.focus(); }, 30); break;
+    case 'wk': S.weekStart = v === '0' ? mondayOf(today()) : addDays(S.weekStart, 7 * +v); render(); break;
+    case 'slot': openModal({ kind: 'slot', date: el.dataset.d, hour: +el.dataset.h }); break;
+    case 'place': { const it = getItem(id), s = getStep(it, sid); s.slot = { date: S.modal.date, start: `${pad(S.modal.hour)}:00` }; store.saveItem(it); closeModal(); toast(`„${s.title}“ er komið í dagatalið.`); break; }
+    case 'sched-save': { const [it, s] = curStep(); const d = $('#sc-date').value, t = $('#sc-time').value; if (!d || !t) { toast('Veldu dag og tíma.'); break; }
+      s.slot = { date: d, start: t }; const rv = $('#sc-rem')?.value ?? ''; s.remind = rv === '' ? null : +rv; store.saveItem(it); toast(`Sett á ${fmtShort(d)} kl. ${t}.`); if (S.modal.kind === 'sched') closeModal(); else { renderModal(); render(); } break; }
+    case 'sched-clear': { const [it, s] = curStep(); s.slot = null; store.saveItem(it); if (S.modal.kind === 'sched') closeModal(); else { renderModal(); render(); } break; }
+    case 'energy': { const [it, s] = curStep(); s.energy = v; store.saveItem(it); renderModal(); render(); break; }
+    case 'sdep': { const [it, s] = curStep(); const d = el.dataset.dep; s.dependsOn = s.dependsOn.includes(d) ? s.dependsOn.filter(x => x !== d) : [...s.dependsOn, d]; store.saveItem(it); renderModal(); render(); break; }
+    case 'split-do': { const [it, s] = curStep(); const lines = $('#split-text').value.split('\n').map(x => x.trim()).filter(Boolean);
+      if (lines.length < 2) { toast('Skrifaðu að minnsta kosti tvö skref, eitt í hverja línu.'); break; }
+      const each = MINS.reduce((best, x) => Math.abs(x - s.minutes / lines.length) < Math.abs(best - s.minutes / lines.length) ? x : best, 15);
+      const parts = []; lines.forEach((t, i) => parts.push(newStep({ title: t, minutes: each, energy: s.energy, dependsOn: i === 0 ? [...s.dependsOn] : [parts[i - 1].id] })));
+      const last = parts[parts.length - 1].id;
+      it.steps.forEach(o => { if (o.dependsOn.includes(s.id)) o.dependsOn = o.dependsOn.map(x => x === s.id ? last : x); });
+      const idx = it.steps.indexOf(s); it.steps.splice(idx, 1, ...parts); store.saveItem(it); S.game.splits = (S.game.splits || 0) + 1; store.saveGame();
+      toast(`Brotið niður í ${parts.length} skref.`); openModal({ kind: 'item', id: it.id }); render(); break; }
+    case 'split-sub': { const [it, s] = curStep(); const lines = $('#split-text').value.split('\n').map(x => x.trim()).filter(Boolean);
+      if (!lines.length) { toast('Skrifaðu að minnsta kosti eitt skref í undirverkefnið.'); $('#split-text').focus(); break; }
+      const each = MINS.reduce((best, x) => Math.abs(x - s.minutes / lines.length) < Math.abs(best - s.minutes / lines.length) ? x : best, 15);
+      const child = newItem(isEvent(it) ? 'verkefni' : it.type, { title: s.title, parentId: it.id, parentStepId: s.id, steps: lines.map(t => newStep({ title: t, minutes: each, energy: s.energy })) });
+      s.subId = child.id; s.slot = null; s.done = false; s.doneAt = null;
+      store.saveItem(child); store.saveItem(it); S.game.splits = (S.game.splits || 0) + 1; store.saveGame();
+      toast(`„${s.title}“ er orðið undirverkefni. Þú getur tengt skrefin saman hér.`); openModal({ kind: 'item', id: child.id }); render(); break; }
+    case 'add-sub': { const it = getItem(S.modal.id), t = $('#ns-title').value.trim(); if (!t) { toast('Skrifaðu fyrst heiti undirverkefnisins.'); $('#ns-title').focus(); break; }
+      const st = newStep({ title: t, minutes: +$('#ns-min').value }); const child = newItem(isEvent(it) ? 'verkefni' : it.type, { title: t, parentId: it.id, parentStepId: st.id });
+      st.subId = child.id; it.steps.push(st); store.saveItem(child); store.saveItem(it); openModal({ kind: 'item', id: child.id }); render(); setTimeout(() => $('#ns-title')?.focus(), 30); break; }
+    case 'settings': openModal({ kind: 'settings' }); break;
+    case 'notif': Notification.requestPermission().then(() => renderModal()).catch(() => {}); break;
+    case 'install': P.installEvt?.prompt(); P.installEvt = null; renderModal(); break;
+    case 'ics-all': exportICS(active(), 'skref-dagatal.ics'); break;
+    case 'ics-item': { const it = getItem(S.modal.id); exportICS(descendants(it), `skref-${(it.title || 'atridi').toLowerCase().replace(/[^a-z0-9áðéíóúýþæö]+/g, '-').slice(0, 30)}.ics`); break; }
+    case 'backup': exportBackup(); break;
+    case 'snooze': { const box = el.closest('.rem'); const r = box?._r; if (r) { S.snoozed.push({ ...r, key: r.key + '|z' + Date.now(), at: Date.now() + 10 * 60000 }); box.remove(); toast('Ég minni þig á eftir 10 mínútur.'); } break; }
+    case 'rem-x': el.closest('.rem')?.remove(); break;
+    case 'ai-go': aiGo(v); break;
+    case 'ai-stop': aiCtl?.abort(); break;
+    case 'ai-clear': { const host = v === 'wizard' ? S.modal.w : S.modal; host.ai = null; renderModal(); break; }
+    case 'ai-tog': { const host = v === 'wizard' ? S.modal.w : S.modal; const x = host.ai?.list?.[+el.dataset.idx]; if (x) { x.on = !x.on; renderModal(); } break; }
+    case 'ai-add': aiAdd(v); break;
+    case 'ai-split': aiSplit(); break;
+    case 'party-close': $('#party').hidden = true; cancelAnimationFrame(confRaf); { const c = $('#confetti'); c.getContext('2d').clearRect(0, 0, c.width, c.height); } break;
+    case 'rw-add': { const t = $('#rw-title').value.trim(); if (!t) { $('#rw-title').focus(); break; }
+      S.game.rewards = [...(S.game.rewards || []), { id: uid(), title: t, cost: +$('#rw-cost').value, redeemed: [] }]; store.saveGame(); render(); toast('Verðlaunum bætt við.'); break; }
+    case 'rw-suggest': $('#rw-title').value = v; $('#rw-title').focus(); break;
+    case 'rw-redeem': { const r = S.game.rewards.find(x => x.id === v); const avail = stats().xp - (S.game.spent || 0); if (!r || avail < r.cost) break;
+      S.game.spent = (S.game.spent || 0) + r.cost; r.redeemed = [...(r.redeemed || []), Date.now()]; store.saveGame(); render();
+      const P = $('#party'); P.querySelector('.party-card').innerHTML = `<p class="party-xp">−${r.cost} stig</p><h2>Njóttu!</h2><p>Þú vannst fyrir þessu.</p>
+        <div class="party-reward">${ICON.gift}<div><small>Verðlaunin þín</small><b>${esc(r.title)}</b></div></div><button class="btn go" data-a="party-close">Takk!</button>`;
+      P.hidden = false; P.querySelector('button').focus(); confetti(120); break; }
+    case 'rw-del': S.game.rewards = S.game.rewards.filter(x => x.id !== v); store.saveGame(); render(); break;
+    case 'del-step': { if (S.confirm !== 'del-step') { S.confirm = 'del-step'; renderModal(); break; }
+      const [it, s] = curStep(); it.steps = it.steps.filter(o => o.id !== s.id); it.steps.forEach(o => o.dependsOn = o.dependsOn.filter(x => x !== s.id));
+      store.saveItem(it); openModal({ kind: 'item', id: it.id }); render(); break; }
+    case 'add-step': addStepFromModal(); break;
+    case 'rm-dep': { const it = getItem(S.modal.id); it.dependsOn = it.dependsOn.filter(x => x !== el.dataset.dep); store.saveItem(it); renderModal(); render(); break; }
+    case 'archive': { const it = getItem(S.modal.id); it.archived = !it.archived; store.saveItem(it); toast(it.archived ? 'Sett í geymslu. Vel gert.' : 'Komið aftur í gang.'); closeModal(); break; }
+    case 'del-item': { if (S.confirm !== 'del-item') { S.confirm = 'del-item'; renderModal(); break; } store.deleteItem(S.modal.id); closeModal(); toast('Eytt.'); break; }
+    case 'jd': S.jDate = v === '0' ? today() : addDays(S.jDate, +v); render(); break;
+    case 'jgo': S.jDate = v; render(); window.scrollTo(0, 0); break;
+    case 'mood': case 'jen': { const e = { ...(S.journal[S.jDate] || {}) }; const key = a === 'mood' ? 'mood' : 'energy'; const val = a === 'mood' ? +v : v;
+      e[key] = e[key] === val ? null : val; e.text = $('#j-text')?.value ?? e.text ?? ''; e.updatedAt = Date.now(); store.saveJournal(S.jDate, e); render(); break; }
+    case 'prompt': { const ta = $('#j-text'); const p = PROMPTS[+v]; ta.value = (ta.value.trim() ? ta.value.replace(/\s*$/, '\n\n') : '') + p + '\n'; ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length; queueJournal(); break; }
+    /* wizard */
+    case 'w-type': { const w = S.modal.w; w.type = v; w.i = 0; if (v === 'admin') w.steps = adminSteps(); else if (v === 'verkefni') w.steps = [newStep(), newStep(), newStep()]; else w.steps = []; renderModal(); $('#w-title')?.focus(); break; }
+    case 'w-back': { const w = S.modal.w; w.err = ''; if (w.i > 0) w.i--; else w.type = null; renderModal(); break; }
+    case 'w-next': { const w = S.modal.w; if (!w.title.trim()) { w.err = 'Gefðu þessu heiti fyrst.'; renderModal(); break; }
+      if (w.type === 'verkefni' && w.i === 1 && !w.steps.some(s => s.title.trim())) { w.err = 'Skrifaðu að minnsta kosti eitt skref.'; renderModal(); break; }
+      w.err = ''; w.i++; renderModal(); break; }
+    case 'w-add': { const w = S.modal.w; w.steps.push(newStep()); renderModal(); $(`#ws-${w.steps.at(-1).id}`)?.focus(); break; }
+    case 'w-rm': { const w = S.modal.w; const [gone] = w.steps.splice(+el.dataset.idx, 1); w.steps.forEach(s => s.dependsOn = s.dependsOn.filter(x => x !== gone.id)); renderModal(); break; }
+    case 'w-dep': { const w = S.modal.w; const s = w.steps.find(x => x.id === sid), d = el.dataset.dep; s.dependsOn = s.dependsOn.includes(d) ? s.dependsOn.filter(x => x !== d) : [...s.dependsOn, d]; renderModal(); break; }
+    case 'w-save': saveWizard(); break;
+  }
+});
+function addStepFromModal() {
+  const it = getItem(S.modal.id), t = $('#ns-title').value.trim(); if (!t) { $('#ns-title').focus(); return; }
+  it.steps.push(newStep({ title: t, minutes: +$('#ns-min').value })); store.saveItem(it); renderModal(); render(); $('#ns-title')?.focus();
+}
+function saveWizard() {
+  const w = S.modal.w; if (!w.title.trim()) { w.err = 'Gefðu þessu heiti fyrst.'; renderModal(); return; }
+  const steps = w.steps.filter(s => s.title.trim()).map(s => ({ ...s, title: s.title.trim(), minutes: +s.minutes }));
+  const ids = new Set(steps.map(s => s.id)); steps.forEach(s => s.dependsOn = s.dependsOn.filter(d => ids.has(d)));
+  const it = newItem(w.type, { title: w.title.trim(), why: w.why, reward: isEvent({ type: w.type }) ? '' : w.reward.trim(), to: w.to, subject: w.subject, more: w.more, steps,
+    ...(isEvent({ type: w.type }) ? { date: w.date, start: w.start, end: w.end, notes: w.notes, remind: w.remind === '' ? null : +w.remind,
+      repeat: { freq: w.freq, days: w.date ? [fromISO(w.date).getDay()] : [], until: '' } } : {}) });
+  store.saveItem(it); toast(`„${it.title}“ er komið inn.`);
+  if (S.view !== 'idag' && S.view !== 'dagatal') S.view = 'verkefni';
+  openModal({ kind: 'item', id: it.id }); render();
+}
+
+document.addEventListener('input', ev => {
+  const t = ev.target;
+  if (t.id === 'j-text') return queueJournal();
+  if (t.id === 'split-text' && S.modal) { S.modal.splitText = t.value; return; }
+  if (S.modal?.kind === 'new') {
+    const w = S.modal.w;
+    if (t.dataset.w) w[t.dataset.w] = t.value;
+    if (t.dataset.ws) { w.steps[+t.dataset.idx][t.dataset.ws] = t.dataset.ws === 'minutes' ? +t.value : t.value; if (t.dataset.ws === 'minutes') renderModal(); }
+  }
+});
+document.addEventListener('change', ev => {
+  const t = ev.target, m = S.modal; if (!m) return;
+  if (t.id === 'imp-file' && t.files?.[0]) { importBackup(t.files[0]); t.value = ''; return; }
+  if (m.kind === 'settings' && (t.dataset.ch === 'set-morning' || t.dataset.ch === 'set-evening')) { S.game[t.dataset.ch === 'set-morning' ? 'morning' : 'evening'] = t.value; store.saveGame(); toast(t.value ? `Áminning stillt kl. ${t.value}.` : 'Slökkt á áminningu.'); return; }
+  if (m.kind === 'item' && t.dataset.f) { const it = getItem(m.id); it[t.dataset.f] = t.value; store.saveItem(it); render(); }
+  if (m.kind === 'item' && ['repeat', 'remind', 'until'].includes(t.dataset.ch)) { const it = getItem(m.id);
+    if (t.dataset.ch === 'repeat') it.repeat = { freq: t.value, days: it.repeat?.days?.length ? it.repeat.days : (it.date ? [fromISO(it.date).getDay()] : []), until: it.repeat?.until || '' };
+    if (t.dataset.ch === 'remind') it.remind = t.value === '' ? null : +t.value;
+    if (t.dataset.ch === 'until') it.repeat = { ...it.repeat, until: t.value };
+    store.saveItem(it); renderModal(); render(); return; }
+  if (m.kind === 'item' && t.dataset.ch === 'add-dep' && t.value) { const it = getItem(m.id); it.dependsOn = [...it.dependsOn, t.value]; store.saveItem(it); renderModal(); render(); }
+  if (m.kind === 'step' && t.dataset.sf) { const [it, s] = curStep(); if (t.dataset.sf === 'title' && !t.value.trim()) return; s[t.dataset.sf] = t.dataset.sf === 'minutes' ? +t.value : t.value.trim(); store.saveItem(it); render(); if (t.dataset.sf === 'minutes') renderModal(); }
+});
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Escape' && !$('#party').hidden) { $('#party').hidden = true; return; }
+  if (ev.key === 'Escape' && S.modal) { closeModal(); return; }
+  if (ev.key === 'Enter' && ev.target.id === 'ns-title') { ev.preventDefault(); addStepFromModal(); }
+  if (ev.key === 'Enter' && ev.target.dataset?.ws === 'title' && S.modal?.kind === 'new') {
+    ev.preventDefault(); const w = S.modal.w, i = +ev.target.dataset.idx;
+    if (i === w.steps.length - 1) w.steps.push(newStep()); renderModal(); $(`#ws-${w.steps[i + 1].id}`)?.focus();
+  }
+});
+let jT;
+function queueJournal() {
+  const st = $('#j-state'); if (st) st.textContent = 'Skrifa…';
+  clearTimeout(jT); const date = S.jDate;
+  jT = setTimeout(() => { const ta = $('#j-text'); if (!ta) return; const e = { ...(S.journal[date] || {}), text: ta.value, updatedAt: Date.now() }; store.saveJournal(date, e);
+    const s2 = $('#j-state'); if (s2) s2.textContent = `Vistað kl. ${fromMin(new Date().getHours() * 60 + new Date().getMinutes())}`; }, 800);
+}
+window.addEventListener('blur', () => {}, true);
+document.addEventListener('focusout', ev => { if (ev.target.id === 'j-text') setTimeout(() => { if (S.view === 'dagbok' && document.activeElement?.id !== 'j-text') { const side = $('#j-side'); if (side) side.innerHTML = journalSide(); } }, 0); });
+
+render();
+store.init().then(() => setTimeout(checkReminders, 1500));
+initPlatform();
+if (!window.claude && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
+})();
+</script>
+
+</body></html>
