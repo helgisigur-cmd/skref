@@ -9,4 +9,4 @@ Opnaðu appið á GitHub Pages-slóð þessarar geymslu og settu það á heimas
 
 Gögnin vistast aðeins í tækinu sjálfu og fara aldrei á GitHub. Taktu afrit af og til undir Stillingar > Sækja afrit.
 
-Ef `index.html` er uppfært þarf að hækka útgáfunúmerið (`skref-v5`) í `sw.js` svo símar sæki nýju útgáfuna.
+Ef `index.html` er uppfært þarf að hækka útgáfunúmerið (`skref-v6`) í `sw.js` svo símar sæki nýju útgáfuna.

@@ -235,6 +235,14 @@ label.f{display:grid;gap:4px;font-size:14px;font-weight:700;color:var(--muted)}
 .bar{position:relative}
 .bar i{position:absolute;top:0;bottom:0;width:2px;background:var(--surface);z-index:1}
 .phase-ok{color:var(--ok)}
+.phases.parts{grid-template-columns:minmax(0,1fr)}
+.part-prep{border-top:3px solid color-mix(in srgb,var(--c-fundur) 55%,var(--line))}
+.part-work{border-top:3px solid color-mix(in srgb,var(--accent) 55%,var(--line))}
+.part-finish{border-top:3px solid color-mix(in srgb,var(--next) 70%,var(--line))}
+.partlbl{font-size:12px;font-weight:700;color:var(--muted);background:var(--surface-2);border-radius:999px;padding:0 8px}
+.wpart{display:grid;gap:8px;padding-top:6px}
+.wpart h3{font-size:15px}
+#ns-part{flex:0 0 auto;width:auto}
 .addrow{display:flex;gap:8px;flex-wrap:wrap}
 .addrow input{flex:1 1 200px;min-width:0}
 .addrow select{flex:0 0 auto;width:auto !important}
@@ -416,7 +424,11 @@ try { const v = localStorage.getItem('skref-view'); if (v) S.view = v; } catch {
 
 const newItem = (type, o = {}) => ({ id: uid(), type, title: '', desc: '', why: '', reward: '', to: '', subject: '', more: '', date: '', start: '', end: '', notes: '', repeat: { freq: 'none', days: [], until: '' }, except: [], remind: null,
   steps: [], dependsOn: [], parentId: null, parentStepId: null, archived: false, createdAt: Date.now(), updatedAt: Date.now(), ...o });
-const newStep = (o = {}) => ({ id: uid(), title: '', minutes: 15, energy: 'mid', done: false, doneAt: null, slot: null, remind: null, dependsOn: [], subId: null, ...o });
+const PARTS = [['prep', 'Undirbúningur'], ['work', 'Verkið sjálft'], ['finish', 'Frágangur']];
+const partOf = s => PARTS.some(([k]) => k === s.part) ? s.part : 'work';
+const partLabel = k => (PARTS.find(([x]) => x === k) || PARTS[1])[1];
+const PART_PH = { prep: 'Til dæmis: kaupa lakk', work: 'Til dæmis: lakka frontana', finish: 'Til dæmis: þrífa penslana og ganga frá' };
+const newStep = (o = {}) => ({ id: uid(), title: '', minutes: 15, energy: 'mid', part: 'work', done: false, doneAt: null, slot: null, remind: null, dependsOn: [], subId: null, ...o });
 const getItem = id => id ? S.items.find(i => i.id === id) : undefined;
 const getStep = (item, sid) => item?.steps.find(s => s.id === sid);
 const isEvent = it => it.type === 'fundur' || it.type === 'dagskra';
@@ -617,9 +629,10 @@ function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = fal
 
 /* ---------- shared bits ---------- */
 const chk = (it, s, disabled) => `<button class="chk" aria-pressed="${s.done}" aria-label="${s.done ? 'Merkja óklárað' : 'Merkja klárað'}: ${esc(s.title)}" data-a="done" data-i="${it.id}" data-s="${s.id}" ${disabled ? 'disabled' : ''}>${ICON.check}</button>`;
-function stepMeta(it, s, showItem) {
+function stepMeta(it, s, showItem, hidePart) {
   const bits = [];
   if (showItem) bits.push(`<span class="badge t-${it.type}">${esc(crumb(it) || TYPES[it.type].label)}</span>`);
+  if (!hidePart && !isEvent(it) && partOf(s) !== 'work') bits.push(`<span class="partlbl">${partLabel(partOf(s))}</span>`);
   bits.push(`<span>${fmtDur(s.minutes)}</span>`);
   if (s.energy) bits.push(`<span>${ENERGY[s.energy]}</span>`);
   if (s.slot) bits.push(`<span class="slotchip">${s.slot.date === today() ? 'Í dag' : fmtShort(s.slot.date)} kl. ${esc(s.slot.start)}</span>`);
@@ -631,7 +644,7 @@ function waitText(it, s) {
   const waits = (s.dependsOn || []).map(d => getStep(it, d)).filter(o => o && !sd(o));
   return waits.length ? `<span>eftir: ${waits.map(o => esc(o.title)).join(', ')}</span>` : '';
 }
-function stepRow(it, s, { showItem = false, actions = true } = {}) {
+function stepRow(it, s, { showItem = false, actions = true, hidePart = false } = {}) {
   const ready = stepReady(it, s), child = getItem(s.subId);
   if (child) {
     const c = counts(child), done = sd(s);
@@ -646,7 +659,7 @@ function stepRow(it, s, { showItem = false, actions = true } = {}) {
   }
   return `<div class="step ${s.done ? 'done' : ready ? 'ready' : 'waiting'}">
     ${chk(it, s, !s.done && !ready)}
-    <div class="body"><button class="title" data-a="edit-step" data-i="${it.id}" data-s="${s.id}">${esc(s.title)}</button><div class="meta">${stepMeta(it, s, showItem)}</div></div>
+    <div class="body"><button class="title" data-a="edit-step" data-i="${it.id}" data-s="${s.id}">${esc(s.title)}</button><div class="meta">${stepMeta(it, s, showItem, hidePart)}</div></div>
     ${actions && !s.done && ready ? `<button class="icon-btn" title="Setja í dagatal" aria-label="Setja í dagatal" data-a="sched" data-i="${it.id}" data-s="${s.id}">${ICON.cal}</button>
     <button class="icon-btn" title="Byrja í 5 mínútur" aria-label="Byrja í 5 mínútur" data-a="timer" data-i="${it.id}" data-s="${s.id}">${ICON.play}</button>` : ''}
   </div>`;
@@ -911,10 +924,10 @@ function mItem() {
       <input type="text" class="title-inp" id="f-title" data-f="title" value="${esc(it.title)}" aria-label="Heiti"></div>${closeBtn}</div>
     ${fields}${rewardField}
     <div class="sec"><h3>${isEvent(it) ? 'Undirbúningur' : 'Skref'}</h3>
-      ${it.steps.length ? (ph.length > 1 || ph[0]?.length > 1 ? `<p class="sub">Skref í sama dálki má vinna samhliða. Dálkur opnast þegar skrefin sem þarf á undan eru kláruð.</p>` : '') + `<div class="phases">${ph.map((p, i) => `<div class="phase"><div class="phase-h">${i === 0 ? 'Hægt að byrja strax' : `Svo · áfangi ${i + 1}`}${p.length > 1 ? ' · samhliða' : ''}${ph.length > 1 && p.every(sd) ? ' <span class="phase-ok">· í höfn</span>' : ''}</div>${p.map(s => stepRow(it, s)).join('')}</div>`).join('')}</div>`
+      ${!isEvent(it) ? partsView(it, ph) : it.steps.length ? (ph.length > 1 || ph[0]?.length > 1 ? `<p class="sub">Skref í sama dálki má vinna samhliða. Dálkur opnast þegar skrefin sem þarf á undan eru kláruð.</p>` : '') + `<div class="phases">${ph.map((p, i) => `<div class="phase"><div class="phase-h">${i === 0 ? 'Hægt að byrja strax' : `Svo · áfangi ${i + 1}`}${p.length > 1 ? ' · samhliða' : ''}${ph.length > 1 && p.every(sd) ? ' <span class="phase-ok">· í höfn</span>' : ''}</div>${p.map(s => stepRow(it, s)).join('')}</div>`).join('')}</div>`
         : `<p class="empty-line">Engin skref ennþá.</p>`}
       ${!isEvent(it) ? aiPanel(S.modal.ai, 'item') : ''}
-      <div class="addrow"><input type="text" id="ns-title" placeholder="Nýtt skref, t.d. kaupa sandpappír" aria-label="Nýtt skref">${minSelect(15, 'id="ns-min" aria-label="Tími"')}<button class="btn sm" data-a="add-step">Bæta við</button>${!isEvent(it) ? `<button class="btn sm ghost" data-a="add-sub" title="Skref sem skiptist sjálft í fleiri skref">+ Sem undirverkefni</button>` : ''}</div>
+      <div class="addrow"><input type="text" id="ns-title" placeholder="Nýtt skref, t.d. kaupa sandpappír" aria-label="Nýtt skref">${!isEvent(it) ? `<select id="ns-part" class="inp" aria-label="Hluti">${PARTS.map(([k, l]) => `<option value="${k}" ${k === (S.modal.lastPart || 'work') ? 'selected' : ''}>${l}</option>`).join('')}</select>` : ''}${minSelect(15, 'id="ns-min" aria-label="Tími"')}<button class="btn sm" data-a="add-step">Bæta við</button>${!isEvent(it) ? `<button class="btn sm ghost" data-a="add-sub" title="Skref sem skiptist sjálft í fleiri skref">+ Sem undirverkefni</button>` : ''}</div>
     </div>
     ${!isEvent(it) && !sub ? `<div class="sec"><h3>Tengingar</h3>
       <p class="sub">Verkefni sem þurfa að klárast áður en þetta getur hafist.</p>
@@ -923,6 +936,16 @@ function mItem() {
       ${blocks.length ? `<p class="sub">Þetta heldur aftur af: ${blocks.map(o => `<b>${esc(o.title)}</b>`).join(', ')}</p>` : ''}</div>` : ''}
     <div class="foot"><button class="btn danger" data-a="del-item">${delLabel}</button>
       <div class="row"><button class="btn" data-a="ics-item" title="Senda í dagatal símans">${ICON.cal} Í dagatal símans</button>${!isEvent(it) && !sub ? `<button class="btn" data-a="archive">${it.archived ? 'Taka úr geymslu' : 'Klárað, setja í geymslu'}</button>` : ''}<button class="btn primary" data-a="close">Loka</button></div></div>`;
+}
+function partsView(it, ph) {
+  const lv = new Map(); ph.forEach((p, i) => p.forEach(s => lv.set(s.id, i)));
+  return `<p class="sub">Grátt hak þýðir að skrefið bíður eftir öðru skrefi. Allt annað má gera strax, í hvaða röð sem er.</p>
+    <div class="phases parts">${PARTS.map(([k, l]) => {
+      const list = it.steps.map((s, i) => ({ s, i })).filter(({ s }) => partOf(s) === k).sort((a, b) => (lv.get(a.s.id) || 0) - (lv.get(b.s.id) || 0) || a.i - b.i).map(x => x.s);
+      const dn = list.filter(sd).length;
+      return `<div class="phase part part-${k}"><div class="phase-h">${l}${list.length ? ` · ${dn} af ${list.length}` : ''}${list.length && dn === list.length ? ' <span class="phase-ok">· búið</span>' : ''}</div>
+        ${list.length ? list.map(s => stepRow(it, s, { hidePart: true })).join('') : `<p class="empty-line" style="padding:4px 6px;font-size:14px">Ekkert ennþá.</p>`}</div>`;
+    }).join('')}</div>`;
 }
 function mStep() {
   const it = getItem(S.modal.id), s = getStep(it, S.modal.sid); if (!s) return '';
@@ -940,6 +963,7 @@ function mStep() {
     <div class="row">${chk(it, s, !s.done && !stepReady(it, s))}<span>${s.done ? 'Klárað' : stepReady(it, s) ? 'Tilbúið að vinna' : 'Bíður eftir öðru skrefi'}</span></div>
     <div class="fgrid"><label class="f">Áætlaður tími${minSelect(s.minutes, 'id="sf-min" data-sf="minutes"')}</label></div>
     ${s.minutes >= 90 ? `<p class="warnline">Þetta er stórt skref. Það er auðveldara að byrja ef það er brotið niður.</p>` : ''}
+    ${!isEvent(it) ? `<div class="sec"><h3>Hluti</h3><div class="row">${PARTS.map(([k, l]) => `<button class="chip" data-a="part" data-v="${k}" aria-pressed="${partOf(s) === k}">${l}</button>`).join('')}</div></div>` : ''}
     <div class="sec"><h3>Orka sem þarf</h3><div class="row">${Object.entries(ENERGY).map(([k, l]) => `<button class="chip" data-a="energy" data-v="${k}" aria-pressed="${s.energy === k}">${l}</button>`).join('')}</div></div>
     ${depsHtml}
     <div class="sec"><h3>Tími í dagatali</h3><div class="fgrid"><label class="f">Dagur<input type="date" id="sc-date" value="${esc(s.slot?.date || today())}"></label><label class="f">Klukkan<input type="time" id="sc-time" value="${esc(s.slot?.start || '10:00')}"></label>${remSelect(s)}</div>
@@ -969,10 +993,10 @@ function mSlot() {
 
 /* wizard */
 function adminSteps() {
-  const a = newStep({ title: 'Finna netfang eða símanúmer', minutes: 10, energy: 'low' });
-  const b = newStep({ title: 'Skrifa drög, punktar duga', minutes: 20, energy: 'mid' });
+  const a = newStep({ title: 'Finna netfang eða símanúmer', minutes: 10, energy: 'low', part: 'prep' });
+  const b = newStep({ title: 'Skrifa drög, punktar duga', minutes: 20, energy: 'mid', part: 'prep' });
   const c = newStep({ title: 'Senda eða hringja', minutes: 10, energy: 'mid', dependsOn: [a.id, b.id] });
-  const d = newStep({ title: 'Fylgja eftir ef ekkert svar hefur borist', minutes: 5, energy: 'low', dependsOn: [c.id] });
+  const d = newStep({ title: 'Fylgja eftir ef ekkert svar hefur borist', minutes: 5, energy: 'low', part: 'finish', dependsOn: [c.id] });
   return [a, b, c, d];
 }
 function mNew() {
@@ -1015,19 +1039,22 @@ function mNew() {
     const tmp = { steps: st };
     body = `<div class="sheet-head"><div><p class="eyebrow">${esc(w.title)}</p><h2>Hvað þarf að gerast á undan hverju?</h2></div>${closeBtn}</div>${dots}
       <p class="sub">Merktu bara það sem raunverulega þarf að bíða. Allt annað má gera samhliða, í hvaða röð sem er.</p>
-      <div class="sec">${st.map(s => { const others = st.filter(o => o.id !== s.id); return `<div class="phase"><b>${esc(s.title)}</b><div class="row"><span class="sub">þarf fyrst:</span>${others.map(o => { const on = s.dependsOn.includes(o.id), cyc = !on && reaches(tmp, o.id, s.id);
+      <div class="sec">${st.map(s => { const others = st.filter(o => o.id !== s.id); return `<div class="phase"><b>${esc(s.title)} <span class="partlbl">${partLabel(partOf(s))}</span></b><div class="row"><span class="sub">þarf fyrst:</span>${others.map(o => { const on = s.dependsOn.includes(o.id), cyc = !on && reaches(tmp, o.id, s.id);
         return `<button class="chip" data-a="w-dep" data-s="${s.id}" data-dep="${o.id}" aria-pressed="${on}" ${cyc ? 'disabled' : ''}>${esc(o.title)}</button>`; }).join('')}</div></div>`; }).join('')}</div>
       <div class="sec"><h3>Svona lítur þetta út</h3><div class="phases">${phases(tmp).map((p, i) => `<div class="phase"><div class="phase-h">${i === 0 ? 'Hægt að byrja strax' : `Áfangi ${i + 1}`}${p.length > 1 ? ' · samhliða' : ''}</div>${p.map(s => `<div style="padding:2px 6px">${esc(s.title)} <span class="sub">${fmtDur(s.minutes)}</span></div>`).join('')}</div>`).join('')}</div></div>`;
   }
   return body + foot;
 }
 function stepsEditor(w) {
-  return `<div class="wsteps">${w.steps.map((s, i) => `<div class="wstep"><span class="n">${i + 1}</span>
-      <input type="text" id="ws-${s.id}" data-ws="title" data-idx="${i}" value="${esc(s.title)}" placeholder="${i === 0 ? 'Fá lánaða málningarsprautu' : 'Næsta skref'}" aria-label="Skref ${i + 1}">
-      ${minSelect(s.minutes, `data-ws="minutes" data-idx="${i}" aria-label="Tími skrefs ${i + 1}"`)}
-      <button class="icon-btn" data-a="w-rm" data-idx="${i}" aria-label="Fjarlægja skref ${i + 1}">${ICON.x}</button>
-      ${+s.minutes >= 120 ? `<span></span><span class="warnline" style="grid-column:2/-1">Stórt skref. Má brjóta það niður í tvö eða fleiri?</span>` : ''}</div>`).join('')}</div>
+  const row = (s, i, n, ph) => `<div class="wstep"><span class="n">${n}</span>
+      <input type="text" id="ws-${s.id}" data-ws="title" data-idx="${i}" value="${esc(s.title)}" placeholder="${n === 1 ? ph : 'Næsta skref'}" aria-label="Skref ${n}">
+      ${minSelect(s.minutes, `data-ws="minutes" data-idx="${i}" aria-label="Tími skrefs ${n}"`)}
+      <button class="icon-btn" data-a="w-rm" data-idx="${i}" aria-label="Fjarlægja skref ${n}">${ICON.x}</button>
+      ${+s.minutes >= 120 ? `<span></span><span class="warnline" style="grid-column:2/-1">Stórt skref. Má brjóta það niður í tvö eða fleiri?</span>` : ''}</div>`;
+  if (isEvent(w)) return `<div class="wsteps">${w.steps.map((s, i) => row(s, i, i + 1, 'Til dæmis: prenta út gögnin')).join('')}</div>
     <div class="row"><button class="btn sm" data-a="w-add">+ Bæta við skrefi</button></div>`;
+  return PARTS.map(([k, l]) => { let n = 0; const rows = w.steps.map((s, i) => partOf(s) === k ? row(s, i, ++n, PART_PH[k]) : '').join('');
+    return `<div class="wpart"><h3>${l}</h3>${rows ? `<div class="wsteps">${rows}</div>` : ''}<div class="row"><button class="btn sm" data-a="w-add" data-part="${k}">+ ${k === 'prep' ? 'Undirbúningur' : k === 'work' ? 'Skref í verkinu' : 'Frágangur'}</button></div></div>`; }).join('');
 }
 
 /* timer */
@@ -1189,11 +1216,12 @@ Stingdu upp á 4 til 8 skrefum sem vantar. Reglur:
 - Fyrsta skrefið á að vera mjög lítið og auðvelt, undir 10 mínútum.
 - "minutes" er ein af tölunum 5, 10, 15, 20, 30, 45, 60, 90, 120.
 - "energy" er "low", "mid" eða "high".
+- "part" er "prep" (undirbúningur, t.d. að kaupa, finna, panta, taka til), "work" (verkið sjálft) eða "finish" (frágangur, t.d. að ganga frá, þrífa, skila, henda rusli). Taktu með frágang ef hann á við.
 - "after" er listi af vísum (byrja á 0) í ÞÍNUM lista yfir skref sem verða að klárast á undan. Tómur listi ef skrefið má gera strax eða samhliða öðrum.
 - "tip" er ein stutt, hlý hvatningarsetning á íslensku, án upphrópana um kyn.
 
 Svaraðu eingöngu með JSON á þessu formi:
-{"steps":[{"title":"Finna símanúmerið","minutes":5,"energy":"low","after":[]}],"tip":"…"}`;
+{"steps":[{"title":"Finna símanúmerið","minutes":5,"energy":"low","part":"prep","after":[]}],"tip":"…"}`;
 }
 async function aiGo(target) {
   const m = S.modal, host = target === 'wizard' ? m.w : m; if (!P.sample) return;
@@ -1203,7 +1231,7 @@ async function aiGo(target) {
     const r = await P.sample.json(aiPrompt(aiContext(target)), { signal: ctl.signal });
     const raw = Array.isArray(r?.steps) ? r.steps : [];
     const list = raw.filter(x => x && typeof x.title === 'string' && x.title.trim()).slice(0, 10).map((x, i) => ({ title: x.title.trim().slice(0, 120), minutes: snapMin(x.minutes),
-      energy: ['low', 'mid', 'high'].includes(x.energy) ? x.energy : 'mid', after: (Array.isArray(x.after) ? x.after : []).map(Number).filter(n => Number.isInteger(n) && n >= 0 && n < i), on: true }));
+      energy: ['low', 'mid', 'high'].includes(x.energy) ? x.energy : 'mid', part: ['prep', 'work', 'finish'].includes(x.part) ? x.part : 'work', after: (Array.isArray(x.after) ? x.after : []).map(Number).filter(n => Number.isInteger(n) && n >= 0 && n < i), on: true }));
     if (!list.length) throw { code: 'empty_completion' };
     host.ai = { state: 'done', list, tip: typeof r.tip === 'string' ? r.tip.slice(0, 200) : '' };
   } catch (e) { host.ai = e?.code === 'cancelled' ? null : { state: 'error', err: aiErr(e?.code) }; }
@@ -1213,7 +1241,7 @@ function aiAdd(target) {
   const m = S.modal, host = target === 'wizard' ? m.w : m, list = host.ai?.list || [];
   const ids = list.map(() => uid()), chosen = list.map((x, i) => ({ ...x, id: ids[i] })).filter(x => x.on);
   const ok = new Set(chosen.map(x => x.id));
-  const steps = chosen.map(x => newStep({ id: x.id, title: x.title, minutes: x.minutes, energy: x.energy, dependsOn: x.after.map(i => ids[i]).filter(id => ok.has(id)) }));
+  const steps = chosen.map(x => newStep({ id: x.id, title: x.title, minutes: x.minutes, energy: x.energy, part: x.part, dependsOn: x.after.map(i => ids[i]).filter(id => ok.has(id)) }));
   if (!steps.length) { toast('Veldu að minnsta kosti eitt skref.'); return; }
   if (target === 'wizard') { m.w.steps = [...m.w.steps.filter(s => s.title.trim()), ...steps]; }
   else { const it = getItem(m.id); it.steps.push(...steps); store.saveItem(it); render(); }
@@ -1225,7 +1253,7 @@ function aiPanel(ai, target) {
   if (ai.state === 'loading') return `<div class="ai"><span class="ai-think">${ICON.spark} Claude er að hugsa…</span><button class="btn sm ghost" data-a="ai-stop">Hætta við</button></div>`;
   if (ai.state === 'error') return `<div class="ai"><span class="err">${esc(ai.err)}</span><button class="btn sm" data-a="ai-go" data-v="${target}">Reyna aftur</button><button class="btn sm ghost" data-a="ai-clear" data-v="${target}">Loka</button></div>`;
   return `<div class="ai ai-done"><div class="ai-head">${ICON.spark}<b>Tillögur frá Claude</b></div>${ai.tip ? `<p class="sub">${esc(ai.tip)}</p>` : ''}
-    <div class="ai-list">${ai.list.map((x, i) => `<button class="ai-row" data-a="ai-tog" data-v="${target}" data-idx="${i}" aria-pressed="${x.on}"><span class="chk" aria-hidden="true">${ICON.check}</span><span><b>${esc(x.title)}</b><small>${fmtDur(x.minutes)} · ${ENERGY[x.energy]}${x.after.length ? ` · eftir: ${x.after.map(j => esc(ai.list[j].title)).join(', ')}` : ''}</small></span></button>`).join('')}</div>
+    <div class="ai-list">${ai.list.map((x, i) => `<button class="ai-row" data-a="ai-tog" data-v="${target}" data-idx="${i}" aria-pressed="${x.on}"><span class="chk" aria-hidden="true">${ICON.check}</span><span><b>${esc(x.title)}</b><small>${partLabel(x.part)} · ${fmtDur(x.minutes)} · ${ENERGY[x.energy]}${x.after.length ? ` · eftir: ${x.after.map(j => esc(ai.list[j].title)).join(', ')}` : ''}</small></span></button>`).join('')}</div>
     <div class="row"><button class="btn sm primary" data-a="ai-add" data-v="${target}">Bæta við völdum</button><button class="btn sm" data-a="ai-go" data-v="${target}">Nýjar tillögur</button><button class="btn sm ghost" data-a="ai-clear" data-v="${target}">Loka</button></div></div>`;
 }
 async function aiSplit() {
@@ -1331,11 +1359,11 @@ function confetti(n) {
   confRaf = requestAnimationFrame(step);
 }
 function seed() {
-  const s = (t, m, e, deps = []) => newStep({ title: t, minutes: m, energy: e, dependsOn: deps });
-  const a = s('Fá lánaða málningarsprautu', 15, 'low'), b = s('Kaupa lakk', 45, 'mid'), c = s('Taka niður borðplötuna', 60, 'high'), d = s('Slípa frontana', 120, 'high');
-  const e = s('Lakka frontana', 180, 'high', [a.id, b.id, d.id]), f = s('Mála panelinn', 120, 'high', [c.id]), g = s('Mála veggina', 180, 'high', [c.id]), h = s('Fara í Sorpu með rusl', 45, 'mid', [c.id]);
+  const s = (t, m, e, deps = [], part = 'work') => newStep({ title: t, minutes: m, energy: e, dependsOn: deps, part });
+  const a = s('Fá lánaða málningarsprautu', 15, 'low', [], 'prep'), b = s('Kaupa lakk', 45, 'mid', [], 'prep'), c = s('Taka niður borðplötuna', 60, 'high', [], 'prep'), d = s('Slípa frontana', 120, 'high', [], 'prep');
+  const e = s('Lakka frontana', 180, 'high', [a.id, b.id, d.id]), f = s('Mála panelinn', 120, 'high', [c.id]), g = s('Mála veggina', 180, 'high', [c.id]), h = s('Fara í Sorpu með rusl', 45, 'mid', [c.id], 'finish');
   const k = newItem('verkefni', { title: 'Taka eldhúsið í gegn', steps: [a, b, c, d, e, f, g, h] });
-  const d1 = s('Taka frontana af og merkja þá', 20, 'mid'), d2 = s('Slípa efri skápana', 45, 'high', [d1.id]), d3 = s('Slípa neðri skápana', 45, 'high', [d1.id]), d4 = s('Þurrka rykið af', 15, 'low', [d2.id, d3.id]);
+  const d1 = s('Taka frontana af og merkja þá', 20, 'mid', [], 'prep'), d2 = s('Slípa efri skápana', 45, 'high', [d1.id]), d3 = s('Slípa neðri skápana', 45, 'high', [d1.id]), d4 = s('Þurrka rykið af', 15, 'low', [d2.id, d3.id], 'finish');
   const dSub = newItem('verkefni', { title: 'Slípa frontana', parentId: k.id, parentStepId: d.id, steps: [d1, d2, d3, d4] });
   d.subId = dSub.id; store.saveItem(dSub);
   const ad = adminSteps(); ad[0].title = 'Finna netfang þjónustuversins';
@@ -1354,7 +1382,7 @@ document.addEventListener('click', ev => {
     case 'nav': S.view = v; try { localStorage.setItem('skref-view', v); } catch {} window.scrollTo(0, 0); render(); break;
     case 'new': { const w = { type: el.dataset.type || null, i: 0, freq: 'none', remind: '15', title: '', desc: '', why: '', reward: '', to: '', subject: '', more: '', date: el.dataset.date || today(), start: el.dataset.time || '', end: '', notes: '', steps: [], err: '' };
       if (w.start) w.end = fromMin(Math.min(toMin(w.start) + 60, 1439));
-      if (w.type === 'admin') w.steps = adminSteps(); else if (w.type === 'verkefni') w.steps = [newStep(), newStep(), newStep()];
+      if (w.type === 'admin') w.steps = adminSteps(); else if (w.type === 'verkefni') w.steps = PARTS.map(([part]) => newStep({ part }));
       openModal({ kind: 'new', w }); break; }
     case 'seed': seed(); break;
     case 'open': openModal({ kind: 'item', id, occ: el.dataset.d || null }); break;
@@ -1383,12 +1411,13 @@ document.addEventListener('click', ev => {
     case 'sched-save': { const [it, s] = curStep(); const d = $('#sc-date').value, t = $('#sc-time').value; if (!d || !t) { toast('Veldu dag og tíma.'); break; }
       s.slot = { date: d, start: t }; const rv = $('#sc-rem')?.value ?? ''; s.remind = rv === '' ? null : +rv; store.saveItem(it); toast(`Sett á ${fmtShort(d)} kl. ${t}.`); if (S.modal.kind === 'sched') closeModal(); else { renderModal(); render(); } break; }
     case 'sched-clear': { const [it, s] = curStep(); s.slot = null; store.saveItem(it); if (S.modal.kind === 'sched') closeModal(); else { renderModal(); render(); } break; }
+    case 'part': { const [it, s] = curStep(); s.part = v; store.saveItem(it); renderModal(); render(); break; }
     case 'energy': { const [it, s] = curStep(); s.energy = v; store.saveItem(it); renderModal(); render(); break; }
     case 'sdep': { const [it, s] = curStep(); const d = el.dataset.dep; s.dependsOn = s.dependsOn.includes(d) ? s.dependsOn.filter(x => x !== d) : [...s.dependsOn, d]; store.saveItem(it); renderModal(); render(); break; }
     case 'split-do': { const [it, s] = curStep(); const lines = $('#split-text').value.split('\n').map(x => x.trim()).filter(Boolean);
       if (lines.length < 2) { toast('Skrifaðu að minnsta kosti tvö skref, eitt í hverja línu.'); break; }
       const each = MINS.reduce((best, x) => Math.abs(x - s.minutes / lines.length) < Math.abs(best - s.minutes / lines.length) ? x : best, 15);
-      const parts = []; lines.forEach((t, i) => parts.push(newStep({ title: t, minutes: each, energy: s.energy, dependsOn: i === 0 ? [...s.dependsOn] : [parts[i - 1].id] })));
+      const parts = []; lines.forEach((t, i) => parts.push(newStep({ title: t, minutes: each, energy: s.energy, part: partOf(s), dependsOn: i === 0 ? [...s.dependsOn] : [parts[i - 1].id] })));
       const last = parts[parts.length - 1].id;
       it.steps.forEach(o => { if (o.dependsOn.includes(s.id)) o.dependsOn = o.dependsOn.map(x => x === s.id ? last : x); });
       const idx = it.steps.indexOf(s); it.steps.splice(idx, 1, ...parts); store.saveItem(it); S.game.splits = (S.game.splits || 0) + 1; store.saveGame();
@@ -1401,7 +1430,7 @@ document.addEventListener('click', ev => {
       store.saveItem(child); store.saveItem(it); S.game.splits = (S.game.splits || 0) + 1; store.saveGame();
       toast(`„${s.title}“ er orðið undirverkefni. Þú getur tengt skrefin saman hér.`); openModal({ kind: 'item', id: child.id }); render(); break; }
     case 'add-sub': { const it = getItem(S.modal.id), t = $('#ns-title').value.trim(); if (!t) { toast('Skrifaðu fyrst heiti undirverkefnisins.'); $('#ns-title').focus(); break; }
-      const st = newStep({ title: t, minutes: +$('#ns-min').value }); const child = newItem(isEvent(it) ? 'verkefni' : it.type, { title: t, parentId: it.id, parentStepId: st.id });
+      const st = newStep({ title: t, minutes: +$('#ns-min').value, part: $('#ns-part')?.value || 'work' }); const child = newItem(isEvent(it) ? 'verkefni' : it.type, { title: t, parentId: it.id, parentStepId: st.id });
       st.subId = child.id; it.steps.push(st); store.saveItem(child); store.saveItem(it); openModal({ kind: 'item', id: child.id }); render(); setTimeout(() => $('#ns-title')?.focus(), 30); break; }
     case 'settings': openModal({ kind: 'settings' }); break;
     case 'notif': Notification.requestPermission().then(() => renderModal()).catch(() => {}); break;
@@ -1440,12 +1469,12 @@ document.addEventListener('click', ev => {
       e[key] = e[key] === val ? null : val; e.text = $('#j-text')?.value ?? e.text ?? ''; e.updatedAt = Date.now(); store.saveJournal(S.jDate, e); render(); break; }
     case 'prompt': { const ta = $('#j-text'); const p = PROMPTS[+v]; ta.value = (ta.value.trim() ? ta.value.replace(/\s*$/, '\n\n') : '') + p + '\n'; ta.focus(); ta.selectionStart = ta.selectionEnd = ta.value.length; queueJournal(); break; }
     /* wizard */
-    case 'w-type': { const w = S.modal.w; w.type = v; w.i = 0; if (v === 'admin') w.steps = adminSteps(); else if (v === 'verkefni') w.steps = [newStep(), newStep(), newStep()]; else w.steps = []; renderModal(); $('#w-title')?.focus(); break; }
+    case 'w-type': { const w = S.modal.w; w.type = v; w.i = 0; if (v === 'admin') w.steps = adminSteps(); else if (v === 'verkefni') w.steps = PARTS.map(([part]) => newStep({ part })); else w.steps = []; renderModal(); $('#w-title')?.focus(); break; }
     case 'w-back': { const w = S.modal.w; w.err = ''; if (w.i > 0) w.i--; else w.type = null; renderModal(); break; }
     case 'w-next': { const w = S.modal.w; if (!w.title.trim()) { w.err = 'Gefðu þessu heiti fyrst.'; renderModal(); break; }
       if (w.type === 'verkefni' && w.i === 1 && !w.steps.some(s => s.title.trim())) { w.err = 'Skrifaðu að minnsta kosti eitt skref.'; renderModal(); break; }
       w.err = ''; w.i++; renderModal(); break; }
-    case 'w-add': { const w = S.modal.w; w.steps.push(newStep()); renderModal(); $(`#ws-${w.steps.at(-1).id}`)?.focus(); break; }
+    case 'w-add': { const w = S.modal.w; w.steps.push(newStep({ part: el.dataset.part || 'work' })); renderModal(); $(`#ws-${w.steps.at(-1).id}`)?.focus(); break; }
     case 'w-rm': { const w = S.modal.w; const [gone] = w.steps.splice(+el.dataset.idx, 1); w.steps.forEach(s => s.dependsOn = s.dependsOn.filter(x => x !== gone.id)); renderModal(); break; }
     case 'w-dep': { const w = S.modal.w; const s = w.steps.find(x => x.id === sid), d = el.dataset.dep; s.dependsOn = s.dependsOn.includes(d) ? s.dependsOn.filter(x => x !== d) : [...s.dependsOn, d]; renderModal(); break; }
     case 'w-save': saveWizard(); break;
@@ -1453,7 +1482,8 @@ document.addEventListener('click', ev => {
 });
 function addStepFromModal() {
   const it = getItem(S.modal.id), t = $('#ns-title').value.trim(); if (!t) { $('#ns-title').focus(); return; }
-  it.steps.push(newStep({ title: t, minutes: +$('#ns-min').value })); store.saveItem(it); renderModal(); render(); $('#ns-title')?.focus();
+  const part = $('#ns-part')?.value || 'work'; S.modal.lastPart = part;
+  it.steps.push(newStep({ title: t, minutes: +$('#ns-min').value, part })); store.saveItem(it); renderModal(); render(); $('#ns-title')?.focus();
 }
 function saveWizard() {
   const w = S.modal.w; if (!w.title.trim()) { w.err = 'Gefðu þessu heiti fyrst.'; renderModal(); return; }
@@ -1495,8 +1525,9 @@ document.addEventListener('keydown', ev => {
   if (ev.key === 'Escape' && S.modal) { closeModal(); return; }
   if (ev.key === 'Enter' && ev.target.id === 'ns-title') { ev.preventDefault(); addStepFromModal(); }
   if (ev.key === 'Enter' && ev.target.dataset?.ws === 'title' && S.modal?.kind === 'new') {
-    ev.preventDefault(); const w = S.modal.w, i = +ev.target.dataset.idx;
-    if (i === w.steps.length - 1) w.steps.push(newStep()); renderModal(); $(`#ws-${w.steps[i + 1].id}`)?.focus();
+    ev.preventDefault(); const w = S.modal.w, i = +ev.target.dataset.idx, part = partOf(w.steps[i]);
+    let j = isEvent(w) ? (i + 1 < w.steps.length ? i + 1 : -1) : w.steps.findIndex((x, k) => k > i && partOf(x) === part);
+    if (j < 0) { w.steps.push(newStep({ part })); j = w.steps.length - 1; } renderModal(); $(`#ws-${w.steps[j].id}`)?.focus();
   }
 });
 let jT;
