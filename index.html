@@ -191,6 +191,7 @@ label.f{display:grid;gap:4px;font-size:14px;font-weight:700;color:var(--muted)}
 .inp, .sheet input[type=text], .sheet input[type=date], .sheet input[type=time], .sheet select, .sheet textarea{
   width:100%;border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:9px 11px;color:var(--ink);font-weight:400;font-size:16px;min-width:0}
 .sheet textarea{min-height:76px;resize:vertical}
+.sheet textarea.desc-box{min-height:110px}
 .title-inp{font-family:var(--font-d);font-size:24px !important;font-weight:700 !important;border-color:transparent !important;background:transparent !important;padding:2px 4px !important}
 .title-inp:hover,.title-inp:focus{border-color:var(--line) !important;background:var(--surface) !important}
 .fgrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
@@ -413,7 +414,7 @@ const S = {
 };
 try { const v = localStorage.getItem('skref-view'); if (v) S.view = v; } catch {}
 
-const newItem = (type, o = {}) => ({ id: uid(), type, title: '', why: '', reward: '', to: '', subject: '', more: '', date: '', start: '', end: '', notes: '', repeat: { freq: 'none', days: [], until: '' }, except: [], remind: null,
+const newItem = (type, o = {}) => ({ id: uid(), type, title: '', desc: '', why: '', reward: '', to: '', subject: '', more: '', date: '', start: '', end: '', notes: '', repeat: { freq: 'none', days: [], until: '' }, except: [], remind: null,
   steps: [], dependsOn: [], parentId: null, parentStepId: null, archived: false, createdAt: Date.now(), updatedAt: Date.now(), ...o });
 const newStep = (o = {}) => ({ id: uid(), title: '', minutes: 15, energy: 'mid', done: false, doneAt: null, slot: null, remind: null, dependsOn: [], subId: null, ...o });
 const getItem = id => id ? S.items.find(i => i.id === id) : undefined;
@@ -902,7 +903,8 @@ function mItem() {
       ${S.modal.occ && it.repeat?.freq && it.repeat.freq !== 'none' ? `<div class="row"><button class="btn sm" data-a="skip-occ" data-v="${S.modal.occ}">Sleppa þessu skipti (${fmtShort(S.modal.occ)})</button></div>` : ''}
       ${(it.except || []).length ? `<p class="sub">Sleppt: ${it.except.slice().sort().map(d => `${fmtShort(d)} <button class="linkbtn" data-a="unskip-occ" data-v="${d}">afturkalla</button>`).join(', ')}</p>` : ''}
       <label class="f">Athugasemdir<textarea id="f-notes" data-f="notes">${esc(it.notes)}</textarea></label></div>`
-    : sub ? '' : `<div class="sec"><label class="f">Af hverju skiptir þetta mig máli?<textarea id="f-why" data-f="why" placeholder="Til dæmis: mig langar að líða vel í eldhúsinu">${esc(it.why)}</textarea></label></div>`;
+    : `<div class="sec"><label class="f">Lýstu verkinu<textarea id="f-desc" data-f="desc" class="desc-box" placeholder="Hvað þarf að gera? Claude notar þetta til að stinga upp á skrefum.">${esc(it.desc)}</textarea></label>
+      ${sub ? '' : `<label class="f">Af hverju skiptir þetta mig máli?<textarea id="f-why" data-f="why" placeholder="Til dæmis: mig langar að líða vel í eldhúsinu">${esc(it.why)}</textarea></label>`}</div>`;
   const rewardField = isEvent(it) ? '' : `<label class="f reward-f"><span>${ICON.gift} Verðlaun þegar ${sub ? 'þetta undirverkefni' : 'þetta'} klárast</span><input type="text" id="f-reward" data-f="reward" value="${esc(it.reward)}" placeholder="${sub ? 'Til dæmis: góður kaffibolli' : 'Til dæmis: út að borða'}"></label>`;
   const delLabel = S.confirm === 'del-item' ? (descendants(it).length > 1 ? 'Smelltu aftur. Undirverkefnin eyðast líka' : 'Smelltu aftur til að eyða') : 'Eyða';
   return `<div class="sheet-head"><div style="flex:1;min-width:0;display:grid;gap:4px">${sub ? `<button class="btn sm ghost" style="justify-self:start;padding-left:0" data-a="open" data-i="${parent.id}">‹ ${esc(crumb(parent))}</button>` : ''}<span class="badge t-${it.type}">${sub ? 'Undirverkefni' : TYPES[it.type].label}</span>
@@ -986,6 +988,7 @@ function mNew() {
     <div class="typepick">${Object.entries(TYPES).map(([k, v]) => `<button class="t-${k}" data-a="w-type" data-v="${k}"><span class="badge">${v.label}</span><b>${v.label}</b><span>${v.desc}</span></button>`).join('')}</div>`;
   if (screen === 'nafn') body = `<div class="sheet-head"><div><p class="eyebrow">Nýtt verkefni</p><h2>Hvað heitir verkefnið?</h2></div>${closeBtn}</div>${dots}
     <label class="f">Heiti<input type="text" data-w="title" id="w-title" value="${esc(w.title)}" placeholder="Taka eldhúsið í gegn" autofocus></label>
+    <label class="f">Lýstu verkinu (má sleppa)<textarea data-w="desc" id="w-desc" class="desc-box" placeholder="Hvað þarf að gera? Til dæmis: mála frontana hvíta, skipta um borðplötu og mála veggina. Því meira sem þú skrifar, því betri tillögur getur Claude gert.">${esc(w.desc)}</textarea></label>
     <label class="f">Af hverju skiptir þetta þig máli? (má sleppa)<textarea data-w="why" id="w-why" placeholder="Það hjálpar að muna af hverju, þegar erfitt er að byrja.">${esc(w.why)}</textarea></label>
     <label class="f reward-f"><span>${ICON.gift} Hvernig ætlar þú að verðlauna þig þegar þetta klárast? (má sleppa)</span><input type="text" data-w="reward" id="w-reward" value="${esc(w.reward)}" placeholder="Til dæmis: út að borða"></label>`;
   if (screen === 'admin') body = `<div class="sheet-head"><div><p class="eyebrow">Nýtt admin</p><h2>Hvað þarf að gera?</h2></div>${closeBtn}</div>${dots}
@@ -1171,16 +1174,16 @@ const aiErr = c => ({ not_granted: 'Þú leyfðir ekki Claude í þetta sinn. Op
 const snapMin = m => MINS.reduce((b, x) => Math.abs(x - (+m || 15)) < Math.abs(b - (+m || 15)) ? x : b, 15);
 let aiCtl = null;
 function aiContext(target) {
-  if (target === 'wizard') { const w = S.modal.w; return { title: w.title, type: w.type, why: w.why, to: w.to, subject: w.subject, more: w.more, existing: w.steps.filter(s => s.title.trim()).map(s => s.title.trim()) }; }
+  if (target === 'wizard') { const w = S.modal.w; return { title: w.title, type: w.type, desc: w.desc, why: w.why, to: w.to, subject: w.subject, more: w.more, existing: w.steps.filter(s => s.title.trim()).map(s => s.title.trim()) }; }
   const it = getItem(S.modal.id), r = rootOf(it);
-  return { title: crumb(it), type: it.type, why: r.why, to: r.to, subject: r.subject, more: r.more, existing: it.steps.map(s => s.title) };
+  return { title: crumb(it), type: it.type, desc: it.desc, rootDesc: r !== it ? r.desc : '', why: r.why, to: r.to, subject: r.subject, more: r.more, existing: it.steps.map(s => s.title) };
 }
 function aiPrompt(c) {
   return `Þú hjálpar manneskju með frestunaráráttu og aðgerðarkvíða að brjóta verkefni niður í lítil, áþreifanleg skref svo auðveldara sé að byrja.
 
 Verkefni: ${c.title}
 Tegund: ${c.type === 'admin' ? 'Admin (samskipti, eyðublöð, umsóknir)' : 'Verkefni'}
-${c.why ? `Af hverju það skiptir máli: ${c.why}\n` : ''}${c.to ? `Til hvers: ${c.to}\n` : ''}${c.subject ? `Efni: ${c.subject}\n` : ''}${c.more ? `Nánar: ${c.more}\n` : ''}${c.existing.length ? `Skref sem eru þegar komin (ekki endurtaka þau):\n${c.existing.map(x => '- ' + x).join('\n')}\n` : ''}
+${c.desc ? `Lýsing á verkinu: ${c.desc}\n` : ''}${c.rootDesc ? `Lýsing á heildarverkefninu: ${c.rootDesc}\n` : ''}${c.why ? `Af hverju það skiptir máli: ${c.why}\n` : ''}${c.to ? `Til hvers: ${c.to}\n` : ''}${c.subject ? `Efni: ${c.subject}\n` : ''}${c.more ? `Nánar: ${c.more}\n` : ''}${c.existing.length ? `Skref sem eru þegar komin (ekki endurtaka þau):\n${c.existing.map(x => '- ' + x).join('\n')}\n` : ''}
 Stingdu upp á 4 til 8 skrefum sem vantar. Reglur:
 - Skrifaðu á íslensku. Hvert skref byrjar á sögn, til dæmis „Hringja í…“ eða „Kaupa…“, og er í mesta lagi átta orð.
 - Fyrsta skrefið á að vera mjög lítið og auðvelt, undir 10 mínútum.
@@ -1233,7 +1236,7 @@ async function aiSplit() {
     const r = await P.sample.json(`Þú hjálpar manneskju með frestunaráráttu og aðgerðarkvíða. Brjóttu þetta skref niður í 2 til 6 minni, áþreifanleg skref á íslensku. Hvert byrjar á sögn og er í mesta lagi átta orð. Fyrsta skrefið á að vera mjög lítið.
 
 Skref: ${s.title}
-Hluti af: ${crumb(it)}
+Hluti af: ${crumb(it)}${it.desc ? `\nLýsing á verkinu: ${it.desc}` : ''}${rootOf(it) !== it && rootOf(it).desc ? `\nLýsing á heildarverkefninu: ${rootOf(it).desc}` : ''}
 Áætlaður tími alls: ${fmtDur(s.minutes)}
 
 Svaraðu eingöngu með JSON: {"steps":["…","…"]}`, { signal: ctl.signal });
@@ -1349,7 +1352,7 @@ document.addEventListener('click', ev => {
   if (a !== 'del-item' && a !== 'del-step' && S.confirm) { S.confirm = null; }
   switch (a) {
     case 'nav': S.view = v; try { localStorage.setItem('skref-view', v); } catch {} window.scrollTo(0, 0); render(); break;
-    case 'new': { const w = { type: el.dataset.type || null, i: 0, freq: 'none', remind: '15', title: '', why: '', reward: '', to: '', subject: '', more: '', date: el.dataset.date || today(), start: el.dataset.time || '', end: '', notes: '', steps: [], err: '' };
+    case 'new': { const w = { type: el.dataset.type || null, i: 0, freq: 'none', remind: '15', title: '', desc: '', why: '', reward: '', to: '', subject: '', more: '', date: el.dataset.date || today(), start: el.dataset.time || '', end: '', notes: '', steps: [], err: '' };
       if (w.start) w.end = fromMin(Math.min(toMin(w.start) + 60, 1439));
       if (w.type === 'admin') w.steps = adminSteps(); else if (w.type === 'verkefni') w.steps = [newStep(), newStep(), newStep()];
       openModal({ kind: 'new', w }); break; }
@@ -1456,7 +1459,7 @@ function saveWizard() {
   const w = S.modal.w; if (!w.title.trim()) { w.err = 'Gefðu þessu heiti fyrst.'; renderModal(); return; }
   const steps = w.steps.filter(s => s.title.trim()).map(s => ({ ...s, title: s.title.trim(), minutes: +s.minutes }));
   const ids = new Set(steps.map(s => s.id)); steps.forEach(s => s.dependsOn = s.dependsOn.filter(d => ids.has(d)));
-  const it = newItem(w.type, { title: w.title.trim(), why: w.why, reward: isEvent({ type: w.type }) ? '' : w.reward.trim(), to: w.to, subject: w.subject, more: w.more, steps,
+  const it = newItem(w.type, { title: w.title.trim(), desc: w.type === 'verkefni' ? w.desc.trim() : '', why: w.why, reward: isEvent({ type: w.type }) ? '' : w.reward.trim(), to: w.to, subject: w.subject, more: w.more, steps,
     ...(isEvent({ type: w.type }) ? { date: w.date, start: w.start, end: w.end, notes: w.notes, remind: w.remind === '' ? null : +w.remind,
       repeat: { freq: w.freq, days: w.date ? [fromISO(w.date).getDay()] : [], until: '' } } : {}) });
   store.saveItem(it); toast(`„${it.title}“ er komið inn.`);
