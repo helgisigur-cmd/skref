@@ -18,7 +18,7 @@
   --ok:#2E7D4F; --warn:#9A5B00;
   --font-d:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
   --font-b:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',sans-serif;
-  --r:12px; --hour:46px;
+  --r:12px; --hour:56px;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
   --bg:#0F1515; --surface:#172020; --surface-2:#1C2726; --ink:#E3EBE9; --muted:#9AAAA8; --line:#2C3938;
@@ -140,7 +140,7 @@ main{padding-block:24px 64px}
 .cal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
 .cal-head h1{font-size:28px;font-weight:500}
 .cal-scroll{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
-.cal{display:grid;grid-template-columns:52px repeat(7,minmax(96px,1fr));min-width:740px}
+.cal{display:grid;grid-template-columns:46px repeat(var(--days,7),minmax(0,1fr))}
 .cal .dh{position:sticky;top:0;padding:10px 6px;text-align:center;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted);background:var(--surface)}
 .cal .dh b{display:block;font-family:var(--font-d);font-size:20px;color:var(--ink);font-variant-numeric:tabular-nums}
 .cal .dh.today b{color:var(--accent)}
@@ -154,7 +154,9 @@ main{padding-block:24px 64px}
 .blk{position:absolute;border:0;border-radius:7px;padding:3px 6px;text-align:left;font-size:12px;line-height:1.25;overflow:hidden;
   background:color-mix(in srgb,var(--tc) 18%,var(--surface));color:var(--ink);box-shadow:inset 3px 0 0 var(--tc), 0 0 0 1px color-mix(in srgb,var(--tc) 35%,transparent)}
 .blk{display:flex;flex-direction:column;justify-content:flex-start;gap:1px}
-.blk b,.blk span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.blk span{display:block;overflow:hidden;white-space:nowrap;max-width:100%;font-size:11px}
+.blk b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:var(--lines,2);overflow:hidden;overflow-wrap:anywhere;white-space:normal;max-width:100%;font-weight:700}
+@media (max-width:640px){ :root{--hour:64px} .blk{padding:4px 6px} .blk b{font-size:13px} }
 .blk.step{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--tc) 12%,var(--surface)) 0 6px,color-mix(in srgb,var(--tc) 18%,var(--surface)) 6px 12px)}
 .blk.done{opacity:.5;text-decoration:line-through}
 .blk span{font-variant-numeric:tabular-nums;color:var(--muted)}
@@ -405,7 +407,7 @@ const ICON = {
 /* ---------- state ---------- */
 const S = {
   items: [], journal: {}, loaded: false, slow: false, local: false,
-  view: 'idag', weekStart: mondayOf(today()), jDate: today(),
+  view: 'idag', weekStart: today(), jDate: today(),
   skip: new Set(), f: { min: null, energy: null }, filter: 'virkt',
   modal: null, confirm: null,
 };
@@ -713,34 +715,36 @@ function layoutBlocks(blocks) {
   for (const b of blocks) { if (b.s >= end && cluster.length) { finish(); cluster = []; } cluster.push(b); end = Math.max(end, b.e); }
   if (cluster.length) finish(); return blocks;
 }
+const calDays = () => innerWidth < 640 ? 2 : innerWidth < 980 ? 4 : 7;
 function viewCal() {
-  const ws = S.weekStart, days = [...Array(7)].map((_, i) => addDays(ws, i)), t = today();
-  const d0 = fromISO(days[0]), d6 = fromISO(days[6]);
+  const N = calDays(), ws = S.weekStart, days = [...Array(N)].map((_, i) => addDays(ws, i)), t = today();
+  const d0 = fromISO(days[0]), d6 = fromISO(days[N - 1]);
   const range = d0.getMonth() === d6.getMonth() ? `${d0.getDate()}.–${d6.getDate()}. ${MONTHS[d6.getMonth()]}` : `${d0.getDate()}. ${MONTHS[d0.getMonth()]} – ${d6.getDate()}. ${MONTHS[d6.getMonth()]}`;
   const hp = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--hour')) || 46;
   const cols = days.map(d => {
     const blocks = agendaFor(d).filter(a => a.start).map(a => {
       const s = Math.max(toMin(a.start), H0 * 60), e0 = a.end ? toMin(a.end) : toMin(a.start) + 60;
-      return { a, s, e: Math.max(Math.min(e0, H1 * 60), s + 25) };
+      return { a, s, e: Math.max(Math.min(e0, H1 * 60), s + Math.ceil(42 / hp * 60)) };
     }).filter(b => b.s < H1 * 60);
     layoutBlocks(blocks);
     const cells = [...Array(H1 - H0)].map((_, i) => `<button class="cell" aria-label="${fmtShort(d)} kl. ${pad(H0 + i)}:00" data-a="slot" data-d="${d}" data-h="${H0 + i}"></button>`).join('');
     const bl = blocks.map(b => {
-      const top = (b.s - H0 * 60) / 60 * hp, h = Math.max((b.e - b.s) / 60 * hp - 2, 22), w = 100 / b.n;
-      const st = `top:${top}px;height:${h}px;left:calc(${b.lane * w}% + 2px);width:calc(${w}% - 4px)`;
+      const top = (b.s - H0 * 60) / 60 * hp, h = Math.max((b.e - b.s) / 60 * hp - 2, 40), w = 100 / b.n;
+      const showTime = h >= 54, lines = Math.max(2, Math.floor((h - 8 - (showTime ? 14 : 0)) / 16));
+      const st = `top:${top}px;height:${h}px;left:calc(${b.lane * w}% + 2px);width:calc(${w}% - 4px);--lines:${lines}`;
       const a = b.a;
       return a.kind === 'ev'
-        ? `<button class="blk t-${a.it.type}" style="${st}" data-a="open" data-i="${a.it.id}" data-d="${a.d}"><b>${a.it.repeat?.freq && a.it.repeat.freq !== 'none' ? '↻ ' : ''}${esc(a.it.title)}</b><span>${esc(a.start)}${a.end ? '–' + esc(a.end) : ''}</span></button>`
-        : `<button class="blk step t-${a.it.type} ${a.s.done ? 'done' : ''}" style="${st}" data-a="edit-step" data-i="${a.it.id}" data-s="${a.s.id}"><b>${esc(a.s.title)}</b><span>${esc(a.start)} · ${esc(a.it.title)}</span></button>`;
+        ? `<button class="blk t-${a.it.type}" style="${st}" data-a="open" data-i="${a.it.id}" data-d="${a.d}" title="${esc(a.it.title)}">${showTime ? `<span>${esc(a.start)}${a.end ? '–' + esc(a.end) : ''}</span>` : ''}<b>${a.it.repeat?.freq && a.it.repeat.freq !== 'none' ? '↻ ' : ''}${esc(a.it.title)}</b></button>`
+        : `<button class="blk step t-${a.it.type} ${a.s.done ? 'done' : ''}" style="${st}" data-a="edit-step" data-i="${a.it.id}" data-s="${a.s.id}" title="${esc(a.s.title)} · ${esc(crumb(a.it))}">${showTime ? `<span>${esc(a.start)}</span>` : ''}<b>${esc(a.s.title)}</b></button>`;
     }).join('');
     return `<div class="dcol ${d === t ? 'today' : ''}">${cells}${bl}</div>`;
   }).join('');
   const unsched = readySteps().filter(({ s }) => !s.slot);
   const waiting = []; for (const it of active()) for (const s of it.steps) if (!sd(s) && !s.slot && !getItem(s.subId) && !stepReady(it, s)) waiting.push({ it, s });
-  return `<div class="cal-head"><div><p class="eyebrow">Vika ${weekNo(ws)}</p><h1>${range}</h1></div>
-      <div class="row"><button class="btn sm" data-a="wk" data-v="-1" aria-label="Fyrri vika">‹ Fyrri</button><button class="btn sm" data-a="wk" data-v="0">Þessi vika</button><button class="btn sm" data-a="wk" data-v="1" aria-label="Næsta vika">Næsta ›</button></div></div>
+  return `<div class="cal-head"><div><p class="eyebrow">${ws === t ? 'Frá deginum í dag' : `Vika ${weekNo(ws)}`}</p><h1>${range}</h1></div>
+      <div class="row"><button class="btn sm" data-a="wk" data-v="-1" aria-label="Fyrri ${N} dagar">‹ Fyrri</button>${ws !== t ? `<button class="btn sm" data-a="wk" data-v="0">Í dag</button>` : ''}<button class="btn sm" data-a="wk" data-v="1" aria-label="Næstu ${N} dagar">Næsta ›</button></div></div>
     <div class="grid2 calgrid">
-      <div class="cal-scroll"><div class="cal">
+      <div class="cal-scroll"><div class="cal" style="--days:${N}">
         <div class="dh"></div>${days.map(d => { const x = fromISO(d); return `<div class="dh ${d === t ? 'today' : ''}">${DS[x.getDay()]}<b>${x.getDate()}</b></div>`; }).join('')}
         <div class="hours">${[...Array(H1 - H0)].map((_, i) => `<div>${i ? pad(H0 + i) + ':00' : ''}</div>`).join('')}</div>${cols}
       </div></div>
@@ -1142,6 +1146,7 @@ function showReminder(r) {
   }
 }
 setInterval(checkReminders, 20000);
+let lastDays = calDays(); window.addEventListener('resize', () => { const n = calDays(); if (n !== lastDays) { lastDays = n; if (S.view === 'dagatal') render(); } });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkReminders(); });
 
 /* ---------- backup ---------- */
@@ -1369,7 +1374,7 @@ document.addEventListener('click', ev => {
     case 'sched': openModal({ kind: 'sched', id, sid }); break;
     case 'unslot': { const it = getItem(id), s = getStep(it, sid); s.slot = null; store.saveItem(it); render(); break; }
     case 'edit-step': openModal({ kind: 'step', id, sid }); if (el.dataset.split) setTimeout(() => { $('#split-sec')?.scrollIntoView({ block: 'center' }); $('#split-text')?.focus(); }, 30); break;
-    case 'wk': S.weekStart = v === '0' ? mondayOf(today()) : addDays(S.weekStart, 7 * +v); render(); break;
+    case 'wk': S.weekStart = v === '0' ? today() : addDays(S.weekStart, calDays() * +v); render(); break;
     case 'slot': openModal({ kind: 'slot', date: el.dataset.d, hour: +el.dataset.h }); break;
     case 'place': { const it = getItem(id), s = getStep(it, sid); s.slot = { date: S.modal.date, start: `${pad(S.modal.hour)}:00` }; store.saveItem(it); closeModal(); toast(`„${s.title}“ er komið í dagatalið.`); break; }
     case 'sched-save': { const [it, s] = curStep(); const d = $('#sc-date').value, t = $('#sc-time').value; if (!d || !t) { toast('Veldu dag og tíma.'); break; }
